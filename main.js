@@ -187,6 +187,12 @@ app.whenReady().then(() => {
 
   // Redémarrer l'application automatiquement une fois la mise à jour téléchargée
   autoUpdater.on('update-downloaded', () => {
+    try {
+      const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+      fs.writeFileSync(savePath, JSON.stringify(gameState));
+    } catch (err) {
+      console.error("Erreur de sauvegarde avant MAJ:", err);
+    }
     autoUpdater.quitAndInstall();
   });
 });
