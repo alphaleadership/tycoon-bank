@@ -419,6 +419,27 @@ ipcMain.handle('next-day', () => {
     if (firedTraders > 0) cbMessage += ` 📈 RH: Licenciement de ${firedTraders} trader(s).`;
   }
 
+  // Distribution automatique de prêts par les employés
+  if (gameState.employees > 0 && gameState.money > 0) {
+    let maxLoanMultiplier = 5000;
+    if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
+    else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;
+    
+    const maxLoan = gameState.clients * maxLoanMultiplier;
+    let currentLoanGap = maxLoan - gameState.loansOut;
+    
+    if (currentLoanGap > 0) {
+      // Un employé peut traiter jusqu'à 25 000 € de dossiers de prêt par jour
+      let dailyEmployeeCapacity = gameState.employees * 25000;
+      let loanAmount = Math.min(dailyEmployeeCapacity, currentLoanGap, gameState.money);
+      if (loanAmount > 10) {
+        gameState.money -= loanAmount;
+        gameState.loansOut += loanAmount;
+        cbMessage += ` 🏦 Prêts automatiques : ${loanAmount.toFixed(0)} € accordés par les employés.`;
+      }
+    }
+  }
+
   let maxClientsAllowed = gameState.employees * employeeEfficiency;
   if (gameState.clients > maxClientsAllowed) {
     let overloadedClients = gameState.clients - maxClientsAllowed;
