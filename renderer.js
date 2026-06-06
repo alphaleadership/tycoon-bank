@@ -191,3 +191,19 @@ document.getElementById('btn-next-day').addEventListener('click', async () => {
 
 // Init
 updateUI();
+
+// Auto-advance day every minute if all researches are completed
+setInterval(async () => {
+  const state = await window.electronAPI.getState();
+  const allDone = Object.keys(state.researchTree)
+    .filter(k => !state.researchTree[k].repeatable)
+    .every(k => state.unlockedResearches.includes(k));
+    
+  if (allDone) {
+    const res = await window.electronAPI.nextDay();
+    if (res && res.message) {
+      addLog("<b>⏳ Journée Auto (Endgame)</b><br/>" + res.message);
+      updateUI();
+    }
+  }
+}, 60000);
