@@ -324,6 +324,28 @@ ipcMain.handle('check-update', async () => {
   }
 });
 
+ipcMain.handle('hard-reset', () => {
+  gameState = {
+    day: 1,
+    money: 100000,
+    clients: 10,
+    employees: 2,
+    researchers: 0,
+    traders: 0,
+    marketers: 0,
+    researchPoints: 0,
+    loansOut: 0,
+    interestRate: 0.05,
+    centralBankRate: 0.03,
+    marketingLevel: 1,
+    unlockedResearches: [],
+    researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
+    stocks: JSON.parse(JSON.stringify(STOCKS)),
+    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
+  };
+  return { success: true, message: "La partie a été réinitialisée de zéro !" };
+});
+
 ipcMain.handle('action-marketing', () => {
   let cost = 500 * gameState.marketingLevel;
   if (gameState.unlockedResearches.includes('r_targeted_ads')) cost *= 0.6;

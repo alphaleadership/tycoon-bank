@@ -244,6 +244,14 @@ document.getElementById('btn-update').addEventListener('click', async () => {
   addLog(res.message);
 });
 
+document.getElementById('btn-hard-reset').addEventListener('click', async () => {
+  if (confirm("Êtes-vous sûr de vouloir réinitialiser la partie ? Cette action est irréversible !")) {
+    const res = await window.electronAPI.hardReset();
+    addLog(res.message);
+    updateUI();
+  }
+});
+
 // Init
 updateUI();
 

@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   buyStock: (symbol, amount) => ipcRenderer.invoke('buy-stock', { symbol, amount }),
   sellStock: (symbol, amount) => ipcRenderer.invoke('sell-stock', { symbol, amount }),
   nextDay: () => ipcRenderer.invoke('next-day'),
-  checkUpdate: () => ipcRenderer.invoke('check-update')
+  checkUpdate: () => ipcRenderer.invoke('check-update'),
+  hardReset: () => ipcRenderer.invoke('hard-reset')
 });

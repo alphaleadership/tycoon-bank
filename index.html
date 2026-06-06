@@ -26,6 +26,7 @@
       <button class="tab-btn" data-tab="tab-rh">RH & Opérations</button>
       <button class="tab-btn" data-tab="tab-research">Laboratoire</button>
       <button class="tab-btn" data-tab="tab-market">Bourse</button>
+      <button class="tab-btn" data-tab="tab-settings">Paramètres</button>
     </nav>
     
     <main class="dashboard">
@@ -150,6 +151,17 @@
           </div>
           <div class="stock-list" id="stock-list-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
             <!-- Stocks injected here via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5 : PARAMÈTRES -->
+      <div id="tab-settings" class="tab-content" style="display: none;">
+        <div class="card actions-card glass" style="margin-bottom: 1.5rem;">
+          <h2>Paramètres du Jeu</h2>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; max-width: 400px;">
+            <p style="color: var(--text-color); margin-top: 0;">Gérez vos sauvegardes ou repartez de zéro si vous avez fait faillite.</p>
+            <button id="btn-hard-reset" class="btn btn-sell" style="padding: 0.8rem; font-size: 1rem; font-weight: bold; background: rgba(255,50,50,0.2); border: 1px solid rgba(255,50,50,0.5);">⚠️ Réinitialiser la Partie</button>
           </div>
         </div>
       </div>
