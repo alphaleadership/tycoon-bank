@@ -312,6 +312,18 @@ app.on('window-all-closed', function () {
 // IPC Handlers
 ipcMain.handle('get-state', () => gameState);
 
+ipcMain.handle('check-update', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    if (result && result.updateInfo && result.updateInfo.version) {
+      return { success: true, message: `Mise à jour disponible (${result.updateInfo.version}). Téléchargement en cours...` };
+    }
+    return { success: true, message: "Vous avez déjà la dernière version." };
+  } catch (err) {
+    return { success: false, message: "Impossible de vérifier les mises à jour pour le moment." };
+  }
+});
+
 ipcMain.handle('action-marketing', () => {
   let cost = 500 * gameState.marketingLevel;
   if (gameState.unlockedResearches.includes('r_targeted_ads')) cost *= 0.6;

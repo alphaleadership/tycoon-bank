@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   unlockResearch: (id) => ipcRenderer.invoke('unlock-research', id),
   buyStock: (symbol, amount) => ipcRenderer.invoke('buy-stock', { symbol, amount }),
   sellStock: (symbol, amount) => ipcRenderer.invoke('sell-stock', { symbol, amount }),
-  nextDay: () => ipcRenderer.invoke('next-day')
+  nextDay: () => ipcRenderer.invoke('next-day'),
+  checkUpdate: () => ipcRenderer.invoke('check-update')
 });

@@ -238,6 +238,12 @@ document.getElementById('btn-next-day').addEventListener('click', async () => {
   updateUI();
 });
 
+document.getElementById('btn-update').addEventListener('click', async () => {
+  addLog("⏳ Vérification des mises à jour en cours...");
+  const res = await window.electronAPI.checkUpdate();
+  addLog(res.message);
+});
+
 // Init
 updateUI();
 
