@@ -199,6 +199,7 @@ ipcMain.handle('load-game', () => {
       gameState.researchTree = RESEARCH_TREE;
       if (gameState.traders === undefined) gameState.traders = 0;
       if (gameState.marketers === undefined) gameState.marketers = 0;
+      if (gameState.marketingLevel === undefined) gameState.marketingLevel = 1;
       
       // Injecter les nouvelles actions si elles n'existent pas dans la sauvegarde
       for (let s in STOCKS) {
