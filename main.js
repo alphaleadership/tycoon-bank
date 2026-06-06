@@ -389,29 +389,35 @@ ipcMain.handle('next-day', () => {
   }
 
   if (gameState.unlockedResearches.includes('r_hr')) {
+    let requiredEmployees = Math.ceil(gameState.clients / employeeEfficiency);
+    if (requiredEmployees < 1) requiredEmployees = 1;
+
     let hired = 0;
-    while (gameState.clients > gameState.employees * employeeEfficiency) {
-      gameState.employees++;
-      hired++;
+    if (gameState.employees < requiredEmployees) {
+      hired = requiredEmployees - gameState.employees;
+      gameState.employees = requiredEmployees;
     }
+
     let fired = 0;
-    while (gameState.employees > 1 && gameState.clients <= (gameState.employees - 1) * employeeEfficiency) {
-      gameState.employees--;
-      fired++;
+    if (gameState.employees > requiredEmployees) {
+      fired = gameState.employees - requiredEmployees;
+      gameState.employees = requiredEmployees;
     }
     
     // Gestion auto des Traders (1 trader recommandé par tranche de 50 000 € de capital libre)
     let desiredTraders = Math.floor(gameState.money / 50000);
     if (desiredTraders < 0) desiredTraders = 0;
+    
     let hiredTraders = 0;
-    while (gameState.traders < desiredTraders) {
-      gameState.traders++;
-      hiredTraders++;
+    if (gameState.traders < desiredTraders) {
+      hiredTraders = desiredTraders - gameState.traders;
+      gameState.traders = desiredTraders;
     }
+    
     let firedTraders = 0;
-    while (gameState.traders > desiredTraders && gameState.traders > 0) {
-      gameState.traders--;
-      firedTraders++;
+    if (gameState.traders > desiredTraders) {
+      firedTraders = gameState.traders - desiredTraders;
+      gameState.traders = desiredTraders;
     }
 
     if (hired > 0) cbMessage += ` 👔 Recrutement auto (${hired} employé${hired>1?'s':''}).`;
