@@ -3,6 +3,25 @@ const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
+const formatNumber = (val) => {
+  if (val >= 1e33) return (val / 1e33).toFixed(2) + ' Dc';
+  if (val >= 1e30) return (val / 1e30).toFixed(2) + ' No';
+  if (val >= 1e27) return (val / 1e27).toFixed(2) + ' Oc';
+  if (val >= 1e24) return (val / 1e24).toFixed(2) + ' Sp';
+  if (val >= 1e21) return (val / 1e21).toFixed(2) + ' Sx';
+  if (val >= 1e18) return (val / 1e18).toFixed(2) + ' Qi';
+  if (val >= 1e15) return (val / 1e15).toFixed(2) + ' Qa';
+  if (val >= 1e12) return (val / 1e12).toFixed(2) + ' T';
+  if (val >= 1e9) return (val / 1e9).toFixed(2) + ' Md';
+  if (val >= 1e6) return (val / 1e6).toFixed(2) + ' M';
+  return Math.floor(val).toString();
+};
+
+const formatMoney = (val) => {
+  if (val >= 1e6) return formatNumber(val) + ' €';
+  return val.toFixed(2) + ' €';
+};
+
 let mainWindow;
 
 const RESEARCH_TREE = {
@@ -442,7 +461,7 @@ ipcMain.handle('next-day', () => {
       if (loanAmount > 10) {
         gameState.money -= loanAmount;
         gameState.loansOut += loanAmount;
-        cbMessage += ` 🏦 Prêts automatiques : ${loanAmount.toFixed(0)} € accordés par les employés.`;
+        cbMessage += ` 🏦 Prêts automatiques : ${formatMoney(loanAmount)} accordés par les employés.`;
       }
     }
   }
@@ -550,10 +569,10 @@ ipcMain.handle('next-day', () => {
   let netProfit = totalIncome - salaries;
 
   let balanceHtml = `<b style="font-size: 1.1em; color: var(--text-color);">Bilan du Jour ${gameState.day - 1}</b><br/>`;
-  balanceHtml += `🟢 Entrées : +${totalIncome.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Frais: ${accountFees.toFixed(0)}, Intérêts: ${interestIncome.toFixed(0)}, Marchés: ${(hftDividends + traderProfit).toFixed(0)})</span><br/>`;
-  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${profitBonus.toFixed(2)} €</b><br/>`;
-  balanceHtml += `🔴 Sorties : -${salaries.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Salaires: ${salaries.toFixed(0)})</span><br/>`;
-  balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${netProfit.toFixed(2)} €</span></b>`;
+  balanceHtml += `🟢 Entrées : +${formatMoney(totalIncome)} <span style="font-size:0.8rem; color:#aaa;">(Frais: ${formatMoney(accountFees)}, Intérêts: ${formatMoney(interestIncome)}, Marchés: ${formatMoney(hftDividends + traderProfit)})</span><br/>`;
+  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${formatMoney(profitBonus)}</b><br/>`;
+  balanceHtml += `🔴 Sorties : -${formatMoney(salaries)} <span style="font-size:0.8rem; color:#aaa;">(Salaires: ${formatMoney(salaries)})</span><br/>`;
+  balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${formatMoney(netProfit)}</span></b>`;
   
   let events = cbMessage;
   if (events !== "") balanceHtml += `<hr style="margin: 6px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);"><span style="font-size:0.9rem;">${events}</span>`;

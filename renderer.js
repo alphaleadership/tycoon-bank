@@ -1,5 +1,20 @@
-const formatMoney = (amount) => {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+const formatNumber = (val) => {
+  if (val >= 1e33) return (val / 1e33).toFixed(2) + ' Dc';
+  if (val >= 1e30) return (val / 1e30).toFixed(2) + ' No';
+  if (val >= 1e27) return (val / 1e27).toFixed(2) + ' Oc';
+  if (val >= 1e24) return (val / 1e24).toFixed(2) + ' Sp';
+  if (val >= 1e21) return (val / 1e21).toFixed(2) + ' Sx';
+  if (val >= 1e18) return (val / 1e18).toFixed(2) + ' Qi';
+  if (val >= 1e15) return (val / 1e15).toFixed(2) + ' Qa';
+  if (val >= 1e12) return (val / 1e12).toFixed(2) + ' T';
+  if (val >= 1e9) return (val / 1e9).toFixed(2) + ' Md';
+  if (val >= 1e6) return (val / 1e6).toFixed(2) + ' M';
+  return Math.floor(val).toString();
+};
+
+const formatMoney = (val) => {
+  if (val >= 1e6) return formatNumber(val) + ' €';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(val);
 };
 
 const renderResearchTree = (state) => {
@@ -33,7 +48,7 @@ const renderResearchTree = (state) => {
       btnHtml = `<span style="color:var(--success); font-size:0.8rem;">Débloqué</span>`;
     } else {
       const canAfford = state.researchPoints >= r.cost;
-      btnHtml = `<button class="btn secondary-btn research-btn" ${(!hasReq || !canAfford) ? 'disabled' : ''} onclick="window.doResearch('${id}')">Rechercher (${r.cost} RP)</button>`;
+      btnHtml = `<button class="btn secondary-btn research-btn" ${(!hasReq || !canAfford) ? 'disabled' : ''} onclick="window.doResearch('${id}')">Rechercher (${formatNumber(r.cost)} RP)</button>`;
     }
 
     div.innerHTML = `
@@ -71,12 +86,12 @@ const renderStockMarket = (state) => {
       <div class="stock-header">
         <div class="stock-name">${stock.name} <span style="font-size:0.8rem; color:var(--text-muted)">(${symbol})</span></div>
         <div class="stock-price-box">
-          <div class="stock-price">${stock.price.toFixed(2)} €</div>
+          <div class="stock-price">${formatMoney(stock.price)}</div>
           <div class="stock-trend ${trendClass}">${trendSymbol} ${Math.abs(trend).toFixed(2)}%</div>
         </div>
       </div>
       <div class="stock-portfolio">
-        Possédé : <strong>${owned}</strong> action(s)
+        Possédé : <strong>${formatNumber(owned)}</strong> action(s)
       </div>
       <div class="stock-actions">
         <button class="btn btn-buy stock-btn" onclick="window.buyStock('${symbol}', 1)" ${state.money < stock.price ? 'disabled' : ''}>Acheter (1)</button>
@@ -109,18 +124,18 @@ const updateUI = async () => {
   const state = await window.electronAPI.getState();
   document.getElementById('val-day').textContent = state.day;
   document.getElementById('val-money').textContent = formatMoney(state.money);
-  document.getElementById('val-clients').textContent = state.clients;
-  document.getElementById('val-employees').textContent = state.employees;
-  document.getElementById('val-loans').innerText = state.loansOut.toFixed(2) + ' €';
+  document.getElementById('val-clients').textContent = formatNumber(state.clients);
+  document.getElementById('val-employees').textContent = formatNumber(state.employees);
+  document.getElementById('val-loans').innerText = formatMoney(state.loansOut);
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
-  document.getElementById('val-marketing').innerText = `Niv ${state.marketingLevel} / ${state.marketers} Emp`;
+  document.getElementById('val-marketing').innerText = `Niv ${state.marketingLevel} / ${formatNumber(state.marketers)} Emp`;
   
-  document.getElementById('val-rp').textContent = state.researchPoints;
-  document.getElementById('val-researchers').textContent = state.researchers;
+  document.getElementById('val-rp').textContent = formatNumber(state.researchPoints);
+  document.getElementById('val-researchers').textContent = formatNumber(state.researchers);
   document.getElementById('btn-fire-researcher').disabled = state.researchers === 0;
 
-  document.getElementById('val-traders').textContent = state.traders;
+  document.getElementById('val-traders').textContent = formatNumber(state.traders);
   document.getElementById('btn-fire-trader').disabled = state.traders === 0;
   
   document.getElementById('btn-fire-marketer').disabled = state.marketers === 0;
