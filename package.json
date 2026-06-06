@@ -1,6 +1,6 @@
 {
   "name": "tycoon",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Un jeu de Tycoon Bancaire",
   "main": "main.js",
   "scripts": {
