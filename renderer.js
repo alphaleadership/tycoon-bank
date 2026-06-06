@@ -164,12 +164,14 @@ document.getElementById('btn-marketing').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-save').addEventListener('click', async () => {
-  const res = await window.electronAPI.saveGame();
+  const slot = document.getElementById('save-slot').value;
+  const res = await window.electronAPI.saveGame(slot);
   addLog(res.message);
 });
 
 document.getElementById('btn-load').addEventListener('click', async () => {
-  const res = await window.electronAPI.loadGame();
+  const slot = document.getElementById('save-slot').value;
+  const res = await window.electronAPI.loadGame(slot);
   addLog(res.message);
   updateUI();
 });

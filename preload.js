@@ -3,8 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   getState: () => ipcRenderer.invoke('get-state'),
   actionMarketing: () => ipcRenderer.invoke('action-marketing'),
-  saveGame: () => ipcRenderer.invoke('save-game'),
-  loadGame: () => ipcRenderer.invoke('load-game'),
+  saveGame: (slot) => ipcRenderer.invoke('save-game', slot),
+  loadGame: (slot) => ipcRenderer.invoke('load-game', slot),
   actionHire: () => ipcRenderer.invoke('action-hire'),
   actionHireResearcher: () => ipcRenderer.invoke('action-hire-researcher'),
   actionFireResearcher: () => ipcRenderer.invoke('action-fire-researcher'),

@@ -264,6 +264,8 @@ let gameState = {
   portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
 };
 
+let currentSlot = '1';
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -296,7 +298,7 @@ app.whenReady().then(() => {
   // Redémarrer l'application automatiquement une fois la mise à jour téléchargée
   autoUpdater.on('update-downloaded', () => {
     try {
-      const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+      const savePath = path.join(app.getPath('userData'), `tycoon_save_${currentSlot}.json`);
       fs.writeFileSync(savePath, JSON.stringify(gameState));
     } catch (err) {
       console.error("Erreur de sauvegarde avant MAJ:", err);
@@ -426,19 +428,27 @@ ipcMain.handle('action-fire-marketer', () => {
   return { success: false, message: "Aucun marketeur à licencier." };
 });
 
-ipcMain.handle('save-game', () => {
+ipcMain.handle('save-game', (event, slot = '1') => {
+  currentSlot = slot;
   try {
-    const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+    const savePath = path.join(app.getPath('userData'), `tycoon_save_${slot}.json`);
     fs.writeFileSync(savePath, JSON.stringify(gameState));
-    return { success: true, message: "Partie sauvegardée !" };
+    return { success: true, message: `Partie sauvegardée (Slot ${slot}) !` };
   } catch (err) {
     return { success: false, message: "Erreur lors de la sauvegarde." };
   }
 });
 
-ipcMain.handle('load-game', () => {
+ipcMain.handle('load-game', (event, slot = '1') => {
+  currentSlot = slot;
   try {
-    const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+    // Migration: s'il s'agit du slot 1 et qu'il n'existe pas, on tente de charger l'ancien format
+    let savePath = path.join(app.getPath('userData'), `tycoon_save_${slot}.json`);
+    if (slot === '1' && !fs.existsSync(savePath)) {
+      const oldPath = path.join(app.getPath('userData'), 'tycoon_save.json');
+      if (fs.existsSync(oldPath)) savePath = oldPath;
+    }
+
     if (fs.existsSync(savePath)) {
       const data = fs.readFileSync(savePath);
       gameState = JSON.parse(data);
