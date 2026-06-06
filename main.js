@@ -1,0 +1,427 @@
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
+
+let mainWindow;
+
+const RESEARCH_TREE = {
+  'r_marketing': { id: 'r_marketing', name: 'Marketing Ciblé', cost: 10, desc: 'Améliore les campagnes marketing', req: [] },
+  'r_risk': { id: 'r_risk', name: 'Analyse des Risques', cost: 20, desc: 'Permet de prêter plus sans risque', req: [] },
+  'r_online': { id: 'r_online', name: 'Banque en Ligne', cost: 50, desc: 'Gain passif de clients', req: ['r_marketing'] },
+  'r_viral_marketing': { id: 'r_viral_marketing', name: 'Marketing Viral', cost: 150, desc: 'Les campagnes marketing rapportent deux fois plus de clients', req: ['r_marketing'] },
+  'r_premium': { id: 'r_premium', name: 'Comptes Premium', cost: 200, desc: 'Double les frais de tenue de compte (10 € par client)', req: ['r_online'] },
+  'r_lab_equip': { id: 'r_lab_equip', name: 'Équipement de Pointe', cost: 100, desc: 'Les chercheurs produisent 3 RP/jour au lieu de 2', req: [] },
+  'r_university': { id: 'r_university', name: 'Partenariat Universitaire', cost: 200, desc: 'Génère 5 RP passivement chaque jour', req: ['r_lab_equip'] },
+  'r_grants': { id: 'r_grants', name: 'Subventions', cost: 300, desc: 'Le salaire des chercheurs est réduit de moitié (75€/jour)', req: ['r_university'] },
+  'r_hr': { id: 'r_hr', name: 'Département RH & CRM', cost: 180, desc: 'Un employé gère 50 clients. Recrute automatiquement si besoin.', req: ['r_online'] },
+  'r_tax_evasion': { id: 'r_tax_evasion', name: 'Optimisation Fiscale', cost: 600, desc: 'Réduit les salaires versés de 20%', req: ['r_hr'] },
+  'r_ai': { id: 'r_ai', name: 'Trading IA', cost: 100, desc: 'Rendements journaliers', req: ['r_risk', 'r_online'] },
+  'r_ai_research': { id: 'r_ai_research', name: "IA d'Analyse", cost: 500, desc: "Double l'efficacité de tous vos chercheurs", req: ['r_grants', 'r_ai'] },
+  'r_subprime': { id: 'r_subprime', name: 'Prêts Subprimes', cost: 400, desc: "Permet d'accorder des prêts encore plus massifs à vos clients", req: ['r_risk'] },
+  'r_auto_rate': { id: 'r_auto_rate', name: 'Ajustement Dynamique', cost: 120, desc: "Aligne automatiquement votre taux d'intérêt au maximum toléré", req: ['r_risk'] },
+  'r_lobbying': { id: 'r_lobbying', name: 'Lobbying Central', cost: 150, desc: 'Tolère une marge de +5% face au Taux Directeur (au lieu de 3%)', req: ['r_risk'] },
+  'r_cb_influence': { id: 'r_cb_influence', name: 'Siège au Conseil Central', cost: 300, desc: 'Biaise les décisions de la Banque Centrale à la baisse', req: ['r_lobbying'] },
+  'r_hike_cb': { id: 'r_hike_cb', name: 'Pression Haussière', cost: 100, desc: 'Fait augmenter immédiatement le Taux Directeur (+0.5%). Répétable.', req: ['r_cb_influence'], repeatable: true },
+  'r_hft': { id: 'r_hft', name: 'Algorithme HFT', cost: 250, desc: 'Génère 2% de dividendes journaliers sur votre portefeuille', req: ['r_ai'] },
+  'r_insider': { id: 'r_insider', name: "Réseau d'Informateurs", cost: 400, desc: 'Protège vos actions en portefeuille des krachs boursiers', req: ['r_hft'] }
+};
+
+const STOCKS = {
+  'TECH': { name: 'TechCorp', price: 150, volatility: 0.10, history: [150] },
+  'INDUS': { name: 'IndusCorp', price: 80, volatility: 0.05, history: [80] },
+  'GOLD': { name: 'SafeGold', price: 300, volatility: 0.02, history: [300] }
+};
+
+let gameState = {
+  day: 1,
+  money: 100000,
+  clients: 10,
+  employees: 2,
+  researchers: 0,
+  traders: 0,
+  researchPoints: 0,
+  loansOut: 0,
+  interestRate: 0.05,
+  centralBankRate: 0.03,
+  marketingLevel: 1,
+  unlockedResearches: [],
+  researchTree: RESEARCH_TREE,
+  stocks: STOCKS,
+  portfolio: { 'TECH': 0, 'INDUS': 0, 'GOLD': 0 }
+};
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    autoHideMenuBar: true,
+  });
+  mainWindow.loadFile('index.html');
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+
+  // Vérifier les mises à jour et notifier l'utilisateur au lancement
+  autoUpdater.checkForUpdatesAndNotify();
+});
+
+app.on('window-all-closed', function () {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+// IPC Handlers
+ipcMain.handle('get-state', () => gameState);
+
+ipcMain.handle('action-marketing', () => {
+  const cost = 500 * gameState.marketingLevel;
+  if (gameState.money >= cost) {
+    gameState.money -= cost;
+    gameState.marketingLevel++;
+    let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
+    if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
+    gameState.clients += gained;
+    return { success: true, message: `Campagne réussie ! +${gained} clients.` };
+  }
+  return { success: false, message: "Fonds insuffisants." };
+});
+
+ipcMain.handle('action-hire', () => {
+  gameState.employees++;
+  return { success: true, message: "Nouvel employé embauché !" };
+});
+
+ipcMain.handle('action-hire-researcher', () => {
+  gameState.researchers++;
+  return { success: true, message: "Chercheur embauché !" };
+});
+
+ipcMain.handle('action-fire-researcher', () => {
+  if (gameState.researchers > 0) {
+    gameState.researchers--;
+    return { success: true, message: "Chercheur licencié." };
+  }
+  return { success: false, message: "Aucun chercheur à licencier." };
+});
+
+ipcMain.handle('action-hire-trader', () => {
+  gameState.traders++;
+  return { success: true, message: "Trader embauché !" };
+});
+
+ipcMain.handle('action-fire-trader', () => {
+  if (gameState.traders > 0) {
+    gameState.traders--;
+    return { success: true, message: "Trader licencié." };
+  }
+  return { success: false, message: "Aucun trader à licencier." };
+});
+
+ipcMain.handle('save-game', () => {
+  try {
+    const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+    fs.writeFileSync(savePath, JSON.stringify(gameState));
+    return { success: true, message: "Partie sauvegardée !" };
+  } catch (err) {
+    return { success: false, message: "Erreur lors de la sauvegarde." };
+  }
+});
+
+ipcMain.handle('load-game', () => {
+  try {
+    const savePath = path.join(app.getPath('userData'), 'tycoon_save.json');
+    if (fs.existsSync(savePath)) {
+      const data = fs.readFileSync(savePath);
+      gameState = JSON.parse(data);
+      
+      // Mises à jour de compatibilité avec les anciennes sauvegardes
+      gameState.researchTree = RESEARCH_TREE;
+      if (gameState.traders === undefined) gameState.traders = 0;
+      
+      return { success: true, message: "Partie chargée avec succès !" };
+    } else {
+      return { success: false, message: "Aucune sauvegarde trouvée." };
+    }
+  } catch (err) {
+    return { success: false, message: "Erreur lors du chargement." };
+  }
+});
+
+ipcMain.handle('action-loan', () => {
+  let maxLoanMultiplier = 5000;
+  if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
+  else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;
+  
+  const maxLoan = gameState.clients * maxLoanMultiplier;
+  if (gameState.money > 0) {
+    const loanAmount = Math.min(gameState.money, maxLoan);
+    gameState.money -= loanAmount;
+    gameState.loansOut += loanAmount;
+    return { success: true, message: `Vous avez accordé pour ${loanAmount.toFixed(2)} € de prêts.` };
+  }
+  return { success: false, message: "Pas de liquidités disponibles." };
+});
+
+ipcMain.handle('set-rate', (event, rate) => {
+  const r = parseFloat(rate);
+  if (!isNaN(r) && r >= 0) {
+    gameState.interestRate = r / 100;
+    return { success: true, message: `Taux mis à jour à ${r}%.` };
+  }
+  return { success: false, message: "Taux invalide." };
+});
+
+ipcMain.handle('unlock-research', (event, id) => {
+  const r = RESEARCH_TREE[id];
+  if(!r) return { success: false, message: "Recherche introuvable." };
+  if(gameState.unlockedResearches.includes(id) && !r.repeatable) return { success: false, message: "Déjà débloqué." };
+  if(gameState.researchPoints >= r.cost) {
+    const hasReq = r.req.every(reqId => gameState.unlockedResearches.includes(reqId));
+    if(hasReq) {
+      gameState.researchPoints -= r.cost;
+      if (!r.repeatable) {
+        gameState.unlockedResearches.push(id);
+      } else {
+        if (id === 'r_hike_cb') {
+          gameState.centralBankRate += 0.005; // +0.5%
+          if (gameState.centralBankRate > 0.15) gameState.centralBankRate = 0.15;
+        }
+      }
+      return { success: true, message: `Recherche appliquée: ${r.name}` };
+    } else {
+      return { success: false, message: "Prérequis manquants." };
+    }
+  }
+  return { success: false, message: "Pas assez de points." };
+});
+
+ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
+  const stock = gameState.stocks[symbol];
+  if(!stock) return { success: false, message: "Action invalide." };
+  const cost = stock.price * amount;
+  if(gameState.money >= cost) {
+    gameState.money -= cost;
+    gameState.portfolio[symbol] += amount;
+    return { success: true, message: `Achat de ${amount} x ${stock.name} (-${cost.toFixed(2)} €).` };
+  }
+  return { success: false, message: "Fonds insuffisants pour cet achat." };
+});
+
+ipcMain.handle('sell-stock', (event, { symbol, amount }) => {
+  const stock = gameState.stocks[symbol];
+  if(!stock) return { success: false, message: "Action invalide." };
+  if(gameState.portfolio[symbol] >= amount) {
+    const revenue = stock.price * amount;
+    gameState.money += revenue;
+    gameState.portfolio[symbol] -= amount;
+    return { success: true, message: `Vente de ${amount} x ${stock.name} (+${revenue.toFixed(2)} €).` };
+  }
+  return { success: false, message: "Vous ne possédez pas assez de cette action." };
+});
+
+ipcMain.handle('next-day', () => {
+  gameState.day++;
+  
+  let researcherSalary = gameState.unlockedResearches.includes('r_grants') ? 75 : 150;
+  let salaries = (gameState.employees * 100) + (gameState.researchers * researcherSalary) + (gameState.traders * 300);
+  if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries = salaries * 0.8;
+  gameState.money -= salaries;
+  
+  // Frais de tenue de compte
+  const feePerClient = gameState.unlockedResearches.includes('r_premium') ? 10 : 5;
+  const accountFees = gameState.clients * feePerClient;
+  gameState.money += accountFees;
+  
+  const interestIncome = gameState.loansOut * gameState.interestRate;
+  gameState.money += interestIncome;
+  
+  const principalRepayment = gameState.loansOut * 0.1;
+  gameState.money += principalRepayment;
+  gameState.loansOut -= principalRepayment;
+  
+  let newClients = Math.floor(Math.random() * gameState.marketingLevel * 5);
+  if(gameState.unlockedResearches.includes('r_online')) {
+    newClients += 5; // Passive clients
+  }
+  
+  let cbMessage = "";
+  // Central Bank adjusts rates occasionally
+  if (Math.random() < 0.25) { 
+    let change = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 10 + 5) / 1000); // +/- 0.5% to 1.5%
+    
+    // Influence de la recherche r_cb_influence
+    if (gameState.unlockedResearches.includes('r_cb_influence')) {
+      if (change > 0) change *= 0.5; // Divise par 2 les hausses
+      if (change < 0) change *= 1.5; // Multiplie par 1.5 les baisses
+    }
+
+    gameState.centralBankRate += change;
+    if (gameState.centralBankRate < 0.005) gameState.centralBankRate = 0.005;
+    if (gameState.centralBankRate > 0.15) gameState.centralBankRate = 0.15;
+    cbMessage += ` 🏦 La Banque Centrale fixe son taux à ${(gameState.centralBankRate*100).toFixed(1)}%.`;
+  }
+
+  let maxDiff = gameState.unlockedResearches.includes('r_lobbying') ? 0.05 : 0.03;
+  
+  if (gameState.unlockedResearches.includes('r_auto_rate')) {
+    gameState.interestRate = gameState.centralBankRate + maxDiff;
+  }
+
+  // Influence of the rate difference
+  let rateDiff = gameState.interestRate - gameState.centralBankRate;
+  // Ajout d'une tolérance de 0.001 pour éviter les erreurs de flottants (ex: 0.050000001 > 0.05)
+  if (rateDiff > maxDiff + 0.001) {
+    let lost = Math.floor(gameState.clients * 0.05) + 1;
+    gameState.clients -= lost;
+    cbMessage += ` Taux trop élevés : -${lost} clients.`;
+  } else if (rateDiff <= 0.001) {
+    let gained = Math.floor(Math.random() * 4 + 2);
+    newClients += gained;
+  }
+  
+  gameState.clients += newClients;
+  if(gameState.clients < 0) gameState.clients = 0;
+
+  // Gestion de la charge de travail et RH
+  let employeeEfficiency = gameState.unlockedResearches.includes('r_hr') ? 50 : 30;
+  
+  // Auto-recrutement et licenciement si RH débloqué
+  if (gameState.unlockedResearches.includes('r_hr')) {
+    let hired = 0;
+    while (gameState.clients > gameState.employees * employeeEfficiency) {
+      gameState.employees++;
+      hired++;
+    }
+    let fired = 0;
+    while (gameState.employees > 1 && gameState.clients <= (gameState.employees - 1) * employeeEfficiency) {
+      gameState.employees--;
+      fired++;
+    }
+    
+    // Gestion auto des Traders (1 trader recommandé par tranche de 50 000 € de capital libre)
+    let desiredTraders = Math.floor(gameState.money / 50000);
+    if (desiredTraders < 0) desiredTraders = 0;
+    let hiredTraders = 0;
+    while (gameState.traders < desiredTraders) {
+      gameState.traders++;
+      hiredTraders++;
+    }
+    let firedTraders = 0;
+    while (gameState.traders > desiredTraders && gameState.traders > 0) {
+      gameState.traders--;
+      firedTraders++;
+    }
+
+    if (hired > 0) cbMessage += ` 👔 Recrutement auto (${hired} employé${hired>1?'s':''}).`;
+    if (fired > 0) cbMessage += ` 👔 Licenciement auto (${fired} employé${fired>1?'s':''}).`;
+    if (hiredTraders > 0) cbMessage += ` 📈 RH: Embauche de ${hiredTraders} trader(s).`;
+    if (firedTraders > 0) cbMessage += ` 📈 RH: Licenciement de ${firedTraders} trader(s).`;
+  }
+
+  let maxClientsAllowed = gameState.employees * employeeEfficiency;
+  if (gameState.clients > maxClientsAllowed) {
+    let overloadedClients = gameState.clients - maxClientsAllowed;
+    let leavingClients = Math.ceil(overloadedClients * 0.2);
+    gameState.clients -= leavingClients;
+    cbMessage += ` 📞 Sous-effectif du support : -${leavingClients} clients partis.`;
+  }
+
+  let rpPerResearcher = 2;
+  if (gameState.unlockedResearches.includes('r_lab_equip')) rpPerResearcher = 3;
+  if (gameState.unlockedResearches.includes('r_ai_research')) rpPerResearcher *= 2;
+  
+  gameState.researchPoints += gameState.researchers * rpPerResearcher;
+  if (gameState.unlockedResearches.includes('r_university')) {
+    gameState.researchPoints += 5;
+  }
+  
+  if(gameState.unlockedResearches.includes('r_ai')) {
+    gameState.money += 2000; // AI Trading passive income
+  }
+
+  let hftDividends = 0;
+  // Stock Market Update
+  for (let sym in gameState.stocks) {
+    let stock = gameState.stocks[sym];
+    let changePercent = (Math.random() * 2 - 1) * stock.volatility;
+    
+    // Market crash or boom event
+    if (Math.random() < 0.05) {
+      if (changePercent < 0 && gameState.unlockedResearches.includes('r_insider') && gameState.portfolio[sym] > 0) {
+        changePercent = 0; // Protégé du krach
+        cbMessage += ` 🛡️ Krach évité sur ${stock.name}.`;
+      } else {
+        changePercent *= 3;
+      }
+    } 
+    
+    let newPrice = stock.price * (1 + changePercent);
+    if (newPrice < 1) newPrice = 1;
+    
+    stock.price = newPrice;
+    stock.history.push(newPrice);
+    if (stock.history.length > 10) stock.history.shift();
+
+    // Dividendes HFT
+    if (gameState.unlockedResearches.includes('r_hft') && gameState.portfolio[sym] > 0) {
+      hftDividends += (stock.price * gameState.portfolio[sym]) * 0.02;
+    }
+  }
+
+  if (hftDividends > 0) {
+    gameState.money += hftDividends;
+    cbMessage += ` 💰 Dividendes HFT: +${hftDividends.toFixed(2)} €.`;
+  }
+
+  let traderMessage = "";
+  let traderProfit = 0;
+  if (gameState.traders > 0) {
+    for (let i = 0; i < gameState.traders; i++) {
+       let syms = Object.keys(gameState.stocks);
+       let sym = syms[Math.floor(Math.random() * syms.length)];
+       let stock = gameState.stocks[sym];
+       let trend = 0;
+       if (stock.history.length > 1) {
+          trend = stock.price - stock.history[stock.history.length - 2];
+       }
+       if (trend > 0 && gameState.portfolio[sym] > 0) {
+          // Sell 1 share
+          gameState.portfolio[sym]--;
+          traderProfit += stock.price;
+       } else if (trend <= 0 && gameState.money >= stock.price) {
+          // Buy 1 share
+          gameState.money -= stock.price;
+          gameState.portfolio[sym]++;
+       }
+    }
+    if (traderProfit > 0) {
+      gameState.money += traderProfit;
+      traderMessage = ` 📈 Traders auto-vente: +${traderProfit.toFixed(2)} €.`;
+    }
+  }
+
+  let totalIncome = accountFees + interestIncome + hftDividends + traderProfit;
+  let netProfit = totalIncome - salaries;
+
+  let balanceHtml = `<b style="font-size: 1.1em; color: var(--text-color);">Bilan du Jour ${gameState.day - 1}</b><br/>`;
+  balanceHtml += `🟢 Entrées : +${totalIncome.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Frais: ${accountFees.toFixed(0)}, Intérêts: ${interestIncome.toFixed(0)}, Marchés: ${(hftDividends + traderProfit).toFixed(0)})</span><br/>`;
+  balanceHtml += `🔴 Sorties : -${salaries.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Salaires RH: ${salaries.toFixed(0)})</span><br/>`;
+  balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${netProfit.toFixed(2)} €</span></b>`;
+  
+  let events = cbMessage;
+  if (events !== "") balanceHtml += `<hr style="margin: 6px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);"><span style="font-size:0.9rem;">${events}</span>`;
+  
+  if (gameState.money < 0) balanceHtml += "<br/><b style='color:var(--danger)'>⚠️ ATTENTION : Votre banque est à découvert !</b>";
+  
+  return { success: true, message: balanceHtml };
+});

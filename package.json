@@ -1,0 +1,37 @@
+{
+  "name": "tycoon",
+  "version": "1.0.3",
+  "description": "Un jeu de Tycoon Bancaire",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "test": "node -c main.js"
+  },
+  "build": {
+    "appId": "com.tycoon.bank",
+    "publish": [
+      {
+        "provider": "github"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "keywords": [
+    "game",
+    "tycoon",
+    "electron"
+  ],
+  "author": "Alpha",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}
