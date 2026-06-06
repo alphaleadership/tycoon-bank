@@ -654,21 +654,39 @@ ipcMain.handle('next-day', () => {
   }
 
   let randomEventMessage = "";
+  let eventFinancialImpact = 0;
   if (Math.random() < 0.15) {
     let validEvents = RANDOM_EVENTS.filter(e => !e.condition || e.condition(gameState));
     if (validEvents.length > 0) {
       let event = validEvents[Math.floor(Math.random() * validEvents.length)];
+      let moneyBefore = gameState.money;
       randomEventMessage = event.effect(gameState);
+      eventFinancialImpact = gameState.money - moneyBefore;
     }
   }
 
   let totalIncome = totalGrossIncome + profitBonus;
-  let netProfit = totalIncome - salaries;
+  let totalExpenses = salaries;
+
+  if (eventFinancialImpact > 0) totalIncome += eventFinancialImpact;
+  if (eventFinancialImpact < 0) totalExpenses -= eventFinancialImpact;
+
+  let netProfit = totalIncome - totalExpenses;
 
   let balanceHtml = `<b style="font-size: 1.1em; color: var(--text-color);">Bilan du Jour ${gameState.day - 1}</b><br/>`;
-  balanceHtml += `🟢 Entrées : +${formatMoney(totalIncome)} <span style="font-size:0.8rem; color:#aaa;">(Frais: ${formatMoney(accountFees)}, Intérêts: ${formatMoney(interestIncome)}, Marchés: ${formatMoney(hftDividends + traderProfit)})</span><br/>`;
+  
+  let incomeDetails = `(Frais: ${formatMoney(accountFees)}, Intérêts: ${formatMoney(interestIncome)}, Marchés: ${formatMoney(hftDividends + traderProfit)}`;
+  if (eventFinancialImpact > 0) incomeDetails += `, Événement: ${formatMoney(eventFinancialImpact)}`;
+  incomeDetails += `)`;
+  balanceHtml += `🟢 Entrées : +${formatMoney(totalIncome)} <span style="font-size:0.8rem; color:#aaa;">${incomeDetails}</span><br/>`;
+  
   if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${formatMoney(profitBonus)}</b><br/>`;
-  balanceHtml += `🔴 Sorties : -${formatMoney(salaries)} <span style="font-size:0.8rem; color:#aaa;">(Salaires: ${formatMoney(salaries)})</span><br/>`;
+  
+  let expenseDetails = `(Salaires: ${formatMoney(salaries)}`;
+  if (eventFinancialImpact < 0) expenseDetails += `, Événement: ${formatMoney(-eventFinancialImpact)}`;
+  expenseDetails += `)`;
+  balanceHtml += `🔴 Sorties : -${formatMoney(totalExpenses)} <span style="font-size:0.8rem; color:#aaa;">${expenseDetails}</span><br/>`;
+  
   balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${formatMoney(netProfit)}</span></b>`;
   
   let events = cbMessage;
