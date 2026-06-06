@@ -67,6 +67,76 @@ const STOCKS = {
   'AI': { name: 'NeuroSys', price: 350, volatility: 0.15, history: [350] }
 };
 
+const RANDOM_EVENTS = [
+  {
+    name: "Don de généreux investisseurs",
+    effect: (state) => {
+      let amount = Math.floor(state.money * 0.05 + 5000);
+      state.money += amount;
+      return `🎁 Événement : Des investisseurs impressionnés vous offrent ${formatMoney(amount)} !`;
+    }
+  },
+  {
+    name: "Amende réglementaire",
+    effect: (state) => {
+      let amount = Math.floor(state.money * 0.02 + 1000);
+      state.money -= amount;
+      return `⚖️ Événement : Amende de l'autorité des marchés de -${formatMoney(amount)} pour non-conformité.`;
+    }
+  },
+  {
+    name: "Scandale financier",
+    effect: (state) => {
+      let lost = Math.floor(state.clients * 0.1) + 2;
+      state.clients -= lost;
+      if (state.clients < 0) state.clients = 0;
+      return `🗞️ Événement : Scandale dans la presse, vous perdez ${lost} clients !`;
+    }
+  },
+  {
+    name: "Article élogieux",
+    effect: (state) => {
+      let gained = Math.floor(state.clients * 0.05) + 5;
+      state.clients += gained;
+      return `📰 Événement : Un article élogieux attire ${gained} nouveaux clients !`;
+    }
+  },
+  {
+    name: "Fuite d'eau au laboratoire",
+    condition: (state) => state.researchers > 0,
+    effect: (state) => {
+      let lostRP = Math.floor(state.researchPoints * 0.1) + 5;
+      if (lostRP > state.researchPoints) lostRP = state.researchPoints;
+      state.researchPoints -= lostRP;
+      return `💧 Événement : Fuite d'eau au laboratoire, perte de ${lostRP} points de recherche !`;
+    }
+  },
+  {
+    name: "Inspiration géniale",
+    condition: (state) => state.researchers > 0,
+    effect: (state) => {
+      let gainedRP = Math.floor(state.researchPoints * 0.1) + 10;
+      state.researchPoints += gainedRP;
+      return `💡 Événement : Un chercheur a une idée de génie, +${gainedRP} points de recherche !`;
+    }
+  },
+  {
+    name: "Panne informatique",
+    effect: (state) => {
+      let cost = Math.floor(state.employees * 200 + 500);
+      state.money -= cost;
+      return `💻 Événement : Panne de vos serveurs, la réparation coûte ${formatMoney(cost)}.`;
+    }
+  },
+  {
+    name: "Héritage inattendu",
+    effect: (state) => {
+      state.money += 10000;
+      return `📜 Événement : Un client lointain vous a légué 10 000.00 € !`;
+    }
+  }
+];
+
 let gameState = {
   day: 1,
   money: 100000,
@@ -583,6 +653,15 @@ ipcMain.handle('next-day', () => {
     gameState.money += profitBonus;
   }
 
+  let randomEventMessage = "";
+  if (Math.random() < 0.15) {
+    let validEvents = RANDOM_EVENTS.filter(e => !e.condition || e.condition(gameState));
+    if (validEvents.length > 0) {
+      let event = validEvents[Math.floor(Math.random() * validEvents.length)];
+      randomEventMessage = event.effect(gameState);
+    }
+  }
+
   let totalIncome = totalGrossIncome + profitBonus;
   let netProfit = totalIncome - salaries;
 
@@ -594,6 +673,10 @@ ipcMain.handle('next-day', () => {
   
   let events = cbMessage;
   if (events !== "") balanceHtml += `<hr style="margin: 6px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);"><span style="font-size:0.9rem;">${events}</span>`;
+  
+  if (randomEventMessage !== "") {
+    balanceHtml += `<hr style="margin: 6px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);"><div style="padding-top: 4px; font-size:0.9rem; font-weight: bold; color: #ffeb3b;">${randomEventMessage}</div>`;
+  }
   
   if (gameState.money < 0) balanceHtml += "<br/><b style='color:var(--danger)'>⚠️ ATTENTION : Votre banque est à découvert !</b>";
   
