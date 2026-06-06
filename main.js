@@ -402,8 +402,9 @@ ipcMain.handle('next-day', () => {
   }
 
   let traderMessage = "";
-  let traderProfit = 0;
+  let traderProfit = gameState.traders * 150; // Revenu de base garanti par trader
   if (gameState.traders > 0) {
+    let salesProfit = 0;
     for (let i = 0; i < gameState.traders; i++) {
        let syms = Object.keys(gameState.stocks);
        let sym = syms[Math.floor(Math.random() * syms.length)];
@@ -415,16 +416,21 @@ ipcMain.handle('next-day', () => {
        if (trend > 0 && gameState.portfolio[sym] > 0) {
           // Sell 1 share
           gameState.portfolio[sym]--;
-          traderProfit += stock.price;
+          salesProfit += stock.price;
        } else if (trend <= 0 && gameState.money >= stock.price) {
           // Buy 1 share
           gameState.money -= stock.price;
           gameState.portfolio[sym]++;
        }
     }
-    if (traderProfit > 0) {
-      gameState.money += traderProfit;
-      traderMessage = ` 📈 Traders auto-vente: +${traderProfit.toFixed(2)} €.`;
+    
+    traderProfit += salesProfit;
+    gameState.money += traderProfit;
+    
+    if (salesProfit > 0) {
+      traderMessage = ` 📈 Traders : +${traderProfit.toFixed(2)} € (dont ${salesProfit.toFixed(2)} € de ventes).`;
+    } else {
+      traderMessage = ` 📈 Traders (Revenu Garanti) : +${traderProfit.toFixed(2)} €.`;
     }
   }
 
