@@ -4,32 +4,39 @@ const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
 const formatNumber = (val) => {
-  if (val >= 1e66) return (val / 1e66).toFixed(2) + ' Uv';
-  if (val >= 1e63) return (val / 1e63).toFixed(2) + ' V';
-  if (val >= 1e60) return (val / 1e60).toFixed(2) + ' Nd';
-  if (val >= 1e57) return (val / 1e57).toFixed(2) + ' Od';
-  if (val >= 1e54) return (val / 1e54).toFixed(2) + ' Spd';
-  if (val >= 1e51) return (val / 1e51).toFixed(2) + ' Sxd';
-  if (val >= 1e48) return (val / 1e48).toFixed(2) + ' Qid';
-  if (val >= 1e45) return (val / 1e45).toFixed(2) + ' Qd';
-  if (val >= 1e42) return (val / 1e42).toFixed(2) + ' Td';
-  if (val >= 1e39) return (val / 1e39).toFixed(2) + ' Dd';
-  if (val >= 1e36) return (val / 1e36).toFixed(2) + ' Ud';
-  if (val >= 1e33) return (val / 1e33).toFixed(2) + ' Dc';
-  if (val >= 1e30) return (val / 1e30).toFixed(2) + ' No';
-  if (val >= 1e27) return (val / 1e27).toFixed(2) + ' Oc';
-  if (val >= 1e24) return (val / 1e24).toFixed(2) + ' Sp';
-  if (val >= 1e21) return (val / 1e21).toFixed(2) + ' Sx';
-  if (val >= 1e18) return (val / 1e18).toFixed(2) + ' Qi';
-  if (val >= 1e15) return (val / 1e15).toFixed(2) + ' Qa';
-  if (val >= 1e12) return (val / 1e12).toFixed(2) + ' T';
-  if (val >= 1e9) return (val / 1e9).toFixed(2) + ' Md';
-  if (val >= 1e6) return (val / 1e6).toFixed(2) + ' M';
-  return Math.floor(val).toString();
+  if (!isFinite(val)) return isNaN(val) ? '0' : (val > 0 ? 'Infini' : '-Infini');
+  let absVal = Math.abs(val);
+  let sign = val < 0 ? '-' : '';
+  if (absVal >= 1e66) return sign + (absVal / 1e66).toFixed(2) + ' Uv';
+  if (absVal >= 1e63) return sign + (absVal / 1e63).toFixed(2) + ' V';
+  if (absVal >= 1e60) return sign + (absVal / 1e60).toFixed(2) + ' Nd';
+  if (absVal >= 1e57) return sign + (absVal / 1e57).toFixed(2) + ' Od';
+  if (absVal >= 1e54) return sign + (absVal / 1e54).toFixed(2) + ' Spd';
+  if (absVal >= 1e51) return sign + (absVal / 1e51).toFixed(2) + ' Sxd';
+  if (absVal >= 1e48) return sign + (absVal / 1e48).toFixed(2) + ' Qid';
+  if (absVal >= 1e45) return sign + (absVal / 1e45).toFixed(2) + ' Qd';
+  if (absVal >= 1e42) return sign + (absVal / 1e42).toFixed(2) + ' Td';
+  if (absVal >= 1e39) return sign + (absVal / 1e39).toFixed(2) + ' Dd';
+  if (absVal >= 1e36) return sign + (absVal / 1e36).toFixed(2) + ' Ud';
+  if (absVal >= 1e33) return sign + (absVal / 1e33).toFixed(2) + ' Dc';
+  if (absVal >= 1e30) return sign + (absVal / 1e30).toFixed(2) + ' No';
+  if (absVal >= 1e27) return sign + (absVal / 1e27).toFixed(2) + ' Oc';
+  if (absVal >= 1e24) return sign + (absVal / 1e24).toFixed(2) + ' Sp';
+  if (absVal >= 1e21) return sign + (absVal / 1e21).toFixed(2) + ' Sx';
+  if (absVal >= 1e18) return sign + (absVal / 1e18).toFixed(2) + ' Qi';
+  if (absVal >= 1e15) return sign + (absVal / 1e15).toFixed(2) + ' Qa';
+  if (absVal >= 1e12) return sign + (absVal / 1e12).toFixed(2) + ' T';
+  if (absVal >= 1e9) return sign + (absVal / 1e9).toFixed(2) + ' Md';
+  if (absVal >= 1e6) return sign + (absVal / 1e6).toFixed(2) + ' M';
+  return sign + Math.floor(absVal).toString();
 };
 
 const formatMoney = (val) => {
-  if (val >= 1e6) return formatNumber(val) + ' €';
+  if (!isFinite(val)) {
+    if (isNaN(val)) return '0.00 €';
+    return val > 0 ? 'Infini €' : '-Infini €';
+  }
+  if (Math.abs(val) >= 1e6) return formatNumber(val) + ' €';
   return val.toFixed(2) + ' €';
 };
 
