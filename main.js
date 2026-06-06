@@ -86,6 +86,11 @@ app.whenReady().then(() => {
 
   // Vérifier les mises à jour et notifier l'utilisateur au lancement
   autoUpdater.checkForUpdatesAndNotify();
+  
+  // Vérifier régulièrement (toutes les 15 minutes)
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 15 * 60 * 1000);
 });
 
 app.on('window-all-closed', function () {
