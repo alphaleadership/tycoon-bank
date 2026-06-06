@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          gh release create v$VERSION --title "Tycoon Bank v$VERSION" --notes "🚀 Déploiement automatique de la version $VERSION.
+          gh release create v$VERSION --draft --title "Tycoon Bank v$VERSION" --notes "🚀 Déploiement automatique de la version $VERSION.
           
           **Quoi de neuf ?**
           - Dernières modifications et ajouts de fonctionnalités.
@@ -41,3 +41,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --publish always
+
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release edit v$VERSION --draft=false
