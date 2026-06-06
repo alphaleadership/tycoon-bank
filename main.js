@@ -71,7 +71,7 @@ const RANDOM_EVENTS = [
   {
     name: "Don de généreux investisseurs",
     effect: (state) => {
-      let amount = Math.floor(state.money * 0.05 + 5000);
+      let amount = Math.floor(Math.max(0, state.money) * 0.05 + 5000);
       state.money += amount;
       return `🎁 Événement : Des investisseurs impressionnés vous offrent ${formatMoney(amount)} !`;
     }
@@ -79,7 +79,7 @@ const RANDOM_EVENTS = [
   {
     name: "Amende réglementaire",
     effect: (state) => {
-      let amount = Math.floor(state.money * 0.02 + 1000);
+      let amount = Math.floor(Math.max(0, state.money) * 0.02 + 1000);
       state.money -= amount;
       return `⚖️ Événement : Amende de l'autorité des marchés de -${formatMoney(amount)} pour non-conformité.`;
     }
