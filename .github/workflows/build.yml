@@ -23,21 +23,21 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build & Publish Draft
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --publish always
-
-      - name: Publish Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          gh release edit v$VERSION --draft=false --title "Tycoon Bank v$VERSION" --notes "🚀 Déploiement automatique de la version $VERSION.
+          gh release create v$VERSION --title "Tycoon Bank v$VERSION" --notes "🚀 Déploiement automatique de la version $VERSION.
           
           **Quoi de neuf ?**
           - Dernières modifications et ajouts de fonctionnalités.
           - Amélioration de la rentabilité et de la Bourse.
           
-          *L'auto-updater téléchargera automatiquement cette version au prochain lancement du jeu.*"
+          *L'auto-updater téléchargera automatiquement cette version au prochain lancement du jeu.*" || echo "Release already exists"
+
+      - name: Build & Publish App
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish always
