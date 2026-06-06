@@ -47,7 +47,30 @@ const RESEARCH_TREE = {
   'r_hike_cb': { id: 'r_hike_cb', name: 'Pression Haussière', cost: 100, desc: 'Fait augmenter immédiatement le Taux Directeur (+0.5%). Répétable.', req: ['r_cb_influence'], repeatable: true },
   'r_hft': { id: 'r_hft', name: 'Algorithme HFT', cost: 250, desc: 'Génère 2% de dividendes journaliers sur votre portefeuille', req: ['r_ai'] },
   'r_insider': { id: 'r_insider', name: "Réseau d'Informateurs", cost: 400, desc: 'Protège vos actions en portefeuille des krachs boursiers', req: ['r_hft'] }
+  , 'r_eco': { id: 'r_eco', name: 'Banque Écologique', cost: 150, desc: 'Améliore l\'image publique (+2 clients/jour)', req: ['r_online'] }
+  , 'r_mobile': { id: 'r_mobile', name: 'Application Mobile', cost: 200, desc: 'Frais de tenue de compte +2€', req: ['r_online'] }
+  , 'r_crypto_trade': { id: 'r_crypto_trade', name: 'Trading Crypto Avancé', cost: 300, desc: 'Les traders génèrent 50€ de plus par jour', req: ['r_ai'] }
+  , 'r_vip': { id: 'r_vip', name: 'Service VIP', cost: 400, desc: 'Frais de tenue de compte +5€', req: ['r_premium'] }
+  , 'r_roboadvisor': { id: 'r_roboadvisor', name: 'Robo-Advisor', cost: 350, desc: 'Génère 1000€/jour passivement', req: ['r_ai'] }
+  , 'r_greenbonds': { id: 'r_greenbonds', name: 'Obligations Vertes', cost: 300, desc: 'Génère 500€/jour passivement', req: ['r_eco'] }
+  , 'r_loyalty': { id: 'r_loyalty', name: 'Programme de Fidélité', cost: 120, desc: 'Réduit la perte de clients due aux taux de 20%', req: ['r_marketing'] }
+  , 'r_datamining': { id: 'r_datamining', name: 'Data Mining', cost: 280, desc: 'Les chercheurs produisent +1 RP', req: ['r_targeted_ads'] }
+  , 'r_neuromarketing': { id: 'r_neuromarketing', name: 'Neuromarketing', cost: 500, desc: 'Les campagnes marketing rapportent 50% de clients en plus', req: ['r_viral_marketing', 'r_datamining'] }
+  , 'r_hedge': { id: 'r_hedge', name: 'Hedge Fund Interne', cost: 600, desc: 'Revenu des traders +100€/jour', req: ['r_hft'] }
+  , 'r_offshore': { id: 'r_offshore', name: 'Comptes Offshore', cost: 800, desc: 'Réduit encore les salaires de 10%', req: ['r_tax_evasion'] }
+  , 'r_microcredit': { id: 'r_microcredit', name: 'Micro-crédits', cost: 150, desc: 'Prêts max +2000 par client', req: ['r_risk'] }
+  , 'r_gamification': { id: 'r_gamification', name: 'Gamification', cost: 250, desc: 'Attire 5 clients passifs supplémentaires', req: ['r_mobile'] }
+  , 'r_blockchain': { id: 'r_blockchain', name: 'Infrastructure Blockchain', cost: 450, desc: 'Frais de tenue +3€', req: ['r_crypto_trade'] }
+  , 'r_quant': { id: 'r_quant', name: 'Analyse Quantitative', cost: 500, desc: 'Dividendes HFT +1%', req: ['r_ai_research'] }
+  , 'r_flashcrash': { id: 'r_flashcrash', name: 'Protection Flash Crash', cost: 450, desc: 'Réduit les pertes boursières de 50%', req: ['r_insider'] }
+  , 'r_bribery': { id: 'r_bribery', name: 'Pots-de-vin', cost: 400, desc: 'Tolère encore +2% d\'écart avec le taux directeur', req: ['r_lobbying'] }
+  , 'r_monopoly': { id: 'r_monopoly', name: 'Monopole Régional', cost: 700, desc: 'Les clients ne partent presque plus (-50% de fuite)', req: ['r_cb_influence'] }
+  , 'r_quantum': { id: 'r_quantum', name: 'Informatique Quantique', cost: 1000, desc: 'Double la production de RP', req: ['r_quant', 'r_lab_equip'] }
+  , 'r_moon': { id: 'r_moon', name: 'Succursale Lunaire', cost: 2000, desc: 'Frais +10€, Prestige interplanétaire', req: ['r_quantum'] }
+  , 'r_cloning': { id: 'r_cloning', name: 'Clonage d\'Employés', cost: 1500, desc: 'Les employés gèrent 100 clients', req: ['r_hr', 'r_lab_equip'] }
+  , 'r_mindcontrol': { id: 'r_mindcontrol', name: 'Contrôle Mental', cost: 2500, desc: 'Les clients acceptent n\'importe quel taux', req: ['r_neuromarketing', 'r_monopoly'] }
 };
+
 
 const STOCKS = {
   'TECH': { name: 'TechCorp', price: 150, volatility: 0.10, history: [150] },
@@ -135,6 +158,73 @@ const RANDOM_EVENTS = [
       return `📜 Événement : Un client lointain vous a légué 10 000.00 € !`;
     }
   }
+  ,{
+    name: "Audit Surprise",
+    effect: (state) => {
+      let cost = Math.floor(Math.max(0, state.money) * 0.03 + 2000);
+      state.money -= cost;
+      return `🕵️ Événement : Audit surprise, frais de procédure de -${formatMoney(cost)}.`;
+    }
+  },
+  {
+    name: "Bourse Favorable",
+    condition: (state) => state.traders > 0,
+    effect: (state) => {
+      let gain = state.traders * 1500;
+      state.money += gain;
+      return `📈 Événement : Excellente journée en bourse, vos traders rapportent un bonus de +${formatMoney(gain)} !`;
+    }
+  },
+  {
+    name: "Grève des transports",
+    effect: (state) => {
+      let lost = Math.floor(state.clients * 0.03) + 1;
+      state.clients -= lost;
+      if (state.clients < 0) state.clients = 0;
+      return `🚇 Événement : Grève des transports, ${lost} clients ferment leur compte.`;
+    }
+  },
+  {
+    name: "Subvention Gouvernementale",
+    effect: (state) => {
+      state.money += 15000;
+      return `🏛️ Événement : L'État vous accorde une subvention exceptionnelle de 15 000.00 €.`;
+    }
+  },
+  {
+    name: "Campagne de dénigrement",
+    effect: (state) => {
+      let lost = Math.floor(state.clients * 0.08) + 3;
+      state.clients -= lost;
+      if (state.clients < 0) state.clients = 0;
+      return `📉 Événement : Un concurrent lance une rumeur sur vous, vous perdez ${lost} clients.`;
+    }
+  },
+  {
+    name: "Nouveau Partenariat",
+    effect: (state) => {
+      let gained = Math.floor(state.clients * 0.1) + 10;
+      state.clients += gained;
+      return `🤝 Événement : Nouveau partenariat stratégique, +${gained} clients !`;
+    }
+  },
+  {
+    name: "Découverte de faille de sécurité",
+    effect: (state) => {
+      let cost = 10000;
+      state.money -= cost;
+      return `🔓 Événement : Faille de sécurité critique détectée ! Colmatage en urgence pour -${formatMoney(cost)}.`;
+    }
+  },
+  {
+    name: "Revente de matériel obsolète",
+    effect: (state) => {
+      let gain = 3500;
+      state.money += gain;
+      return `🖥️ Événement : Vous revendez de vieux serveurs pour ${formatMoney(gain)}.`;
+    }
+  }
+
 ];
 
 let gameState = {
@@ -213,6 +303,8 @@ ipcMain.handle('action-marketing', () => {
     gameState.marketingLevel++;
     let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
     if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
+      if (gameState.unlockedResearches.includes('r_neuromarketing')) gained = Math.floor(gained * 1.5);
+    if (gameState.unlockedResearches.includes('r_neuromarketing')) gained = Math.floor(gained * 1.5);
     
     let critical = false;
     if (gameState.unlockedResearches.includes('r_influencer') && Math.random() < 0.2) {
@@ -320,6 +412,8 @@ ipcMain.handle('action-loan', () => {
   let maxLoanMultiplier = 5000;
   if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
   else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;
+    if (gameState.unlockedResearches.includes('r_microcredit')) maxLoanMultiplier += 2000;
+  if (gameState.unlockedResearches.includes('r_microcredit')) maxLoanMultiplier += 2000;
   
   const maxLoan = gameState.clients * maxLoanMultiplier;
   if (gameState.money > 0) {
@@ -395,10 +489,15 @@ ipcMain.handle('next-day', () => {
   let baseSalaries = (gameState.employees * 100) + (gameState.researchers * (gameState.unlockedResearches.includes('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
   let salaries = baseSalaries;
   if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries *= 0.8;
+  if (gameState.unlockedResearches.includes('r_offshore')) salaries *= 0.9;
   gameState.money -= salaries;
   
   // Frais de tenue de compte
-  const feePerClient = gameState.unlockedResearches.includes('r_premium') ? 10 : 5;
+  let feePerClient = gameState.unlockedResearches.includes('r_premium') ? 10 : 5;
+  if (gameState.unlockedResearches.includes('r_mobile')) feePerClient += 2;
+  if (gameState.unlockedResearches.includes('r_vip')) feePerClient += 5;
+  if (gameState.unlockedResearches.includes('r_blockchain')) feePerClient += 3;
+  if (gameState.unlockedResearches.includes('r_moon')) feePerClient += 10;
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
@@ -413,6 +512,8 @@ ipcMain.handle('next-day', () => {
   if(gameState.unlockedResearches.includes('r_online')) {
     newClients += 5; // Passive clients
   }
+  if(gameState.unlockedResearches.includes('r_eco')) newClients += 2;
+  if(gameState.unlockedResearches.includes('r_gamification')) newClients += 5;
   
   let cbMessage = "";
   // Central Bank adjusts rates occasionally
@@ -432,6 +533,7 @@ ipcMain.handle('next-day', () => {
   }
 
   let maxDiff = gameState.unlockedResearches.includes('r_lobbying') ? 0.05 : 0.03;
+  if (gameState.unlockedResearches.includes('r_bribery')) maxDiff += 0.02;
   
   if (gameState.unlockedResearches.includes('r_auto_rate')) {
     gameState.interestRate = gameState.centralBankRate + maxDiff;
@@ -442,6 +544,9 @@ ipcMain.handle('next-day', () => {
   // Ajout d'une tolérance de 0.001 pour éviter les erreurs de flottants (ex: 0.050000001 > 0.05)
   if (rateDiff > maxDiff + 0.001) {
     let lost = Math.floor(gameState.clients * 0.05) + 1;
+    if (gameState.unlockedResearches.includes('r_loyalty')) lost = Math.floor(lost * 0.8);
+    if (gameState.unlockedResearches.includes('r_monopoly')) lost = Math.floor(lost * 0.5);
+    if (gameState.unlockedResearches.includes('r_mindcontrol')) lost = 0;
     gameState.clients -= lost;
     cbMessage += ` Taux trop élevés : -${lost} clients.`;
   } else if (rateDiff <= 0.001) {
@@ -454,6 +559,7 @@ ipcMain.handle('next-day', () => {
 
   // Gestion de la charge de travail et RH
   let employeeEfficiency = gameState.unlockedResearches.includes('r_hr') ? 50 : 30;
+  if (gameState.unlockedResearches.includes('r_cloning')) employeeEfficiency = 100;
   
   // Auto-recrutement et licenciement si RH débloqué
   if (gameState.unlockedResearches.includes('r_online')) {
@@ -558,15 +664,19 @@ ipcMain.handle('next-day', () => {
   let rpPerResearcher = 2;
   if (gameState.unlockedResearches.includes('r_lab_equip')) rpPerResearcher = 3;
   if (gameState.unlockedResearches.includes('r_ai_research')) rpPerResearcher *= 2;
+  if (gameState.unlockedResearches.includes('r_datamining')) rpPerResearcher += 1;
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
   if (gameState.unlockedResearches.includes('r_university')) {
     gameState.researchPoints += 5;
   }
+  if (gameState.unlockedResearches.includes('r_quantum')) gameState.researchPoints *= 2;
   
   if(gameState.unlockedResearches.includes('r_ai')) {
     gameState.money += 2000; // AI Trading passive income
   }
+  if(gameState.unlockedResearches.includes('r_roboadvisor')) gameState.money += 1000;
+  if(gameState.unlockedResearches.includes('r_greenbonds')) gameState.money += 500;
 
   let hftDividends = 0;
   // Stock Market Update
@@ -582,6 +692,7 @@ ipcMain.handle('next-day', () => {
       } else {
         changePercent *= 3;
       }
+      if (changePercent < 0 && gameState.unlockedResearches.includes('r_flashcrash')) changePercent *= 0.5;
     } 
     
     let newPrice = stock.price * (1 + changePercent);
@@ -593,7 +704,7 @@ ipcMain.handle('next-day', () => {
 
     // Dividendes HFT
     if (gameState.unlockedResearches.includes('r_hft') && gameState.portfolio[sym] > 0) {
-      hftDividends += (stock.price * gameState.portfolio[sym]) * 0.02;
+      hftDividends += (stock.price * gameState.portfolio[sym]) * (0.02 + (gameState.unlockedResearches.includes('r_quant') ? 0.01 : 0));
     }
   }
 
@@ -603,7 +714,9 @@ ipcMain.handle('next-day', () => {
   }
 
   let traderMessage = "";
-  let traderProfit = gameState.traders * 150; // Revenu de base garanti par trader
+  let traderProfit = gameState.traders * 150;
+  if (gameState.unlockedResearches.includes('r_crypto_trade')) traderProfit += gameState.traders * 50;
+  if (gameState.unlockedResearches.includes('r_hedge')) traderProfit += gameState.traders * 100; // Revenu de base garanti par trader
   if (gameState.traders > 0) {
     let salesProfit = 0;
     let syms = Object.keys(gameState.stocks);
