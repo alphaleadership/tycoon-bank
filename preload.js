@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   actionFireResearcher: () => ipcRenderer.invoke('action-fire-researcher'),
   actionHireTrader: () => ipcRenderer.invoke('action-hire-trader'),
   actionFireTrader: () => ipcRenderer.invoke('action-fire-trader'),
+  actionHireMarketer: () => ipcRenderer.invoke('action-hire-marketer'),
+  actionFireMarketer: () => ipcRenderer.invoke('action-fire-marketer'),
   actionLoan: () => ipcRenderer.invoke('action-loan'),
   setRate: (rate) => ipcRenderer.invoke('set-rate', rate),
   unlockResearch: (id) => ipcRenderer.invoke('unlock-research', id),

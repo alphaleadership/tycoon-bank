@@ -50,8 +50,8 @@
               <span class="stat-value text-secondary" id="val-cb-rate">3.0%</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">Marketing</span>
-              <span class="stat-value" id="val-marketing">Niv 1</span>
+              <span class="stat-label">Marketing (Niveau / Équipe)</span>
+              <span class="stat-value" id="val-marketing">Niv 1 / 0 Emp</span>
             </div>
           </div>
         </div>
@@ -102,8 +102,12 @@
         <div class="card actions-card glass">
           <h2>Actions Stratégiques</h2>
           <div class="action-buttons">
-            <button id="btn-marketing" class="btn primary-btn">Lancer Campagne Marketing (5000 €)</button>
-            <button id="btn-hire" class="btn primary-btn">Embaucher Employé (100 €/j)</button>
+            <button id="btn-marketing" class="btn primary-btn" style="margin-bottom: 0.5rem;">Lancer Campagne Marketing (5000 €)</button>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <button id="btn-hire-marketer" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher Marketeur (150 €/j)</button>
+              <button id="btn-fire-marketer" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
+            </div>
+            <button id="btn-hire" class="btn primary-btn">Embaucher Employé RH (100 €/j)</button>
             <button id="btn-loan" class="btn primary-btn">Accorder Prêts</button>
             <div class="rate-input-group">
               <input type="number" id="input-rate" placeholder="Nouveau taux %" class="input-field">

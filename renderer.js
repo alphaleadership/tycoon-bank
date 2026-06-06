@@ -6,6 +6,21 @@ const renderResearchTree = (state) => {
   const container = document.getElementById('research-tree-container');
   container.innerHTML = '';
   
+  const allDone = Object.keys(state.researchTree)
+    .filter(k => !state.researchTree[k].repeatable)
+    .every(k => state.unlockedResearches.includes(k));
+
+  if (allDone) {
+    const endMsg = document.createElement('div');
+    endMsg.innerHTML = '<b style="color:var(--primary-color);">🌟 Arbre Technologique Complété !</b><br/><span style="font-size:0.85em;">Mode Endgame activé : Les jours passent automatiquement toutes les 10 secondes. Vos Points de Recherche optimisent votre rentabilité (+0.1% / point).</span>';
+    endMsg.style.padding = "1rem";
+    endMsg.style.textAlign = "center";
+    endMsg.style.background = "rgba(100, 255, 150, 0.1)";
+    endMsg.style.borderRadius = "8px";
+    endMsg.style.marginBottom = "1rem";
+    container.appendChild(endMsg);
+  }
+
   for (const [id, r] of Object.entries(state.researchTree)) {
     const isUnlocked = state.unlockedResearches.includes(id) && !r.repeatable;
     const hasReq = r.req.every(reqId => state.unlockedResearches.includes(reqId));
@@ -96,10 +111,10 @@ const updateUI = async () => {
   document.getElementById('val-money').textContent = formatMoney(state.money);
   document.getElementById('val-clients').textContent = state.clients;
   document.getElementById('val-employees').textContent = state.employees;
-  document.getElementById('val-loans').textContent = formatMoney(state.loansOut);
-  document.getElementById('val-rate').textContent = (state.interestRate * 100).toFixed(1) + '%';
-  document.getElementById('val-cb-rate').textContent = (state.centralBankRate * 100).toFixed(1) + '%';
-  document.getElementById('val-marketing').textContent = 'Niv ' + state.marketingLevel;
+  document.getElementById('val-loans').innerText = state.loansOut.toFixed(2) + ' €';
+  document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
+  document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
+  document.getElementById('val-marketing').innerText = `Niv ${state.marketingLevel} / ${state.marketers} Emp`;
   
   document.getElementById('val-rp').textContent = state.researchPoints;
   document.getElementById('val-researchers').textContent = state.researchers;
@@ -107,6 +122,8 @@ const updateUI = async () => {
 
   document.getElementById('val-traders').textContent = state.traders;
   document.getElementById('btn-fire-trader').disabled = state.traders === 0;
+  
+  document.getElementById('btn-fire-marketer').disabled = state.marketers === 0;
   
   renderResearchTree(state);
   renderStockMarket(state);
@@ -167,6 +184,18 @@ document.getElementById('btn-fire-trader').addEventListener('click', async () =>
   updateUI();
 });
 
+document.getElementById('btn-hire-marketer').addEventListener('click', async () => {
+  const res = await window.electronAPI.actionHireMarketer();
+  addLog(res.message);
+  updateUI();
+});
+
+document.getElementById('btn-fire-marketer').addEventListener('click', async () => {
+  const res = await window.electronAPI.actionFireMarketer();
+  addLog(res.message);
+  updateUI();
+});
+
 document.getElementById('btn-loan').addEventListener('click', async () => {
   const res = await window.electronAPI.actionLoan();
   addLog(res.message);
@@ -192,7 +221,7 @@ document.getElementById('btn-next-day').addEventListener('click', async () => {
 // Init
 updateUI();
 
-// Auto-advance day every minute if all researches are completed
+// Auto-advance day every 10 seconds if all researches are completed
 setInterval(async () => {
   const state = await window.electronAPI.getState();
   const allDone = Object.keys(state.researchTree)
@@ -206,4 +235,4 @@ setInterval(async () => {
       updateUI();
     }
   }
-}, 60000);
+}, 10000);

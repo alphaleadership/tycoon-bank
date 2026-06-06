@@ -55,6 +55,7 @@ let gameState = {
   employees: 2,
   researchers: 0,
   traders: 0,
+  marketers: 0,
   researchPoints: 0,
   loansOut: 0,
   interestRate: 0.05,
@@ -144,8 +145,12 @@ ipcMain.handle('action-fire-researcher', () => {
 });
 
 ipcMain.handle('action-hire-trader', () => {
-  gameState.traders++;
-  return { success: true, message: "Trader embauché !" };
+  if (gameState.money >= 300) {
+    gameState.money -= 300;
+    gameState.traders++;
+    return { success: true, message: "Trader recruté." };
+  }
+  return { success: false, message: "Fonds insuffisants (300 €)." };
 });
 
 ipcMain.handle('action-fire-trader', () => {
@@ -154,6 +159,23 @@ ipcMain.handle('action-fire-trader', () => {
     return { success: true, message: "Trader licencié." };
   }
   return { success: false, message: "Aucun trader à licencier." };
+});
+
+ipcMain.handle('action-hire-marketer', () => {
+  if (gameState.money >= 150) {
+    gameState.money -= 150;
+    gameState.marketers++;
+    return { success: true, message: "Marketeur recruté." };
+  }
+  return { success: false, message: "Fonds insuffisants (150 €)." };
+});
+
+ipcMain.handle('action-fire-marketer', () => {
+  if (gameState.marketers > 0) {
+    gameState.marketers--;
+    return { success: true, message: "Marketeur licencié." };
+  }
+  return { success: false, message: "Aucun marketeur à licencier." };
 });
 
 ipcMain.handle('save-game', () => {
@@ -176,6 +198,7 @@ ipcMain.handle('load-game', () => {
       // Mises à jour de compatibilité avec les anciennes sauvegardes
       gameState.researchTree = RESEARCH_TREE;
       if (gameState.traders === undefined) gameState.traders = 0;
+      if (gameState.marketers === undefined) gameState.marketers = 0;
       
       // Injecter les nouvelles actions si elles n'existent pas dans la sauvegarde
       for (let s in STOCKS) {
@@ -267,9 +290,10 @@ ipcMain.handle('sell-stock', (event, { symbol, amount }) => {
 ipcMain.handle('next-day', () => {
   gameState.day++;
   
-  let researcherSalary = gameState.unlockedResearches.includes('r_grants') ? 75 : 150;
-  let salaries = (gameState.employees * 100) + (gameState.researchers * researcherSalary) + (gameState.traders * 300);
-  if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries = salaries * 0.8;
+  // Salaires
+  let baseSalaries = (gameState.employees * 100) + (gameState.researchers * (gameState.unlockedResearches.includes('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
+  let salaries = baseSalaries;
+  if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries *= 0.8;
   gameState.money -= salaries;
   
   // Frais de tenue de compte
@@ -353,6 +377,14 @@ ipcMain.handle('next-day', () => {
       gameState.clients += gained;
       cbMessage += ` 📣 Auto-Marketing: +${gained} clients${critical ? ' (Coup de Maître !)' : ''}.`;
     }
+  }
+
+  // Action des Marketeurs
+  if (gameState.marketers > 0) {
+    let gainedMarketers = gameState.marketers * 3;
+    if (gameState.unlockedResearches.includes('r_viral_marketing')) gainedMarketers *= 2;
+    gameState.clients += gainedMarketers;
+    cbMessage += ` 📣 Équipe Marketing: +${gainedMarketers} clients.`;
   }
 
   if (gameState.unlockedResearches.includes('r_hr')) {
@@ -492,7 +524,7 @@ ipcMain.handle('next-day', () => {
   let balanceHtml = `<b style="font-size: 1.1em; color: var(--text-color);">Bilan du Jour ${gameState.day - 1}</b><br/>`;
   balanceHtml += `🟢 Entrées : +${totalIncome.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Frais: ${accountFees.toFixed(0)}, Intérêts: ${interestIncome.toFixed(0)}, Marchés: ${(hftDividends + traderProfit).toFixed(0)})</span><br/>`;
   if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${profitBonus.toFixed(2)} €</b><br/>`;
-  balanceHtml += `🔴 Sorties : -${salaries.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Salaires RH: ${salaries.toFixed(0)})</span><br/>`;
+  balanceHtml += `🔴 Sorties : -${salaries.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Salaires: ${salaries.toFixed(0)})</span><br/>`;
   balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${netProfit.toFixed(2)} €</span></b>`;
   
   let events = cbMessage;
