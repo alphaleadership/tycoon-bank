@@ -410,11 +410,23 @@ ipcMain.handle('next-day', () => {
     }
   }
 
-  let totalIncome = accountFees + interestIncome + hftDividends + traderProfit;
+  // Bonus de rentabilité si toutes les recherches sont terminées
+  let allDone = Object.keys(gameState.researchTree).filter(k => !gameState.researchTree[k].repeatable).every(k => gameState.unlockedResearches.includes(k));
+  let profitBonus = 0;
+  let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
+  
+  if (allDone) {
+    let multiplier = gameState.researchPoints * 0.001; // +0.1% de rentabilité par RP
+    profitBonus = totalGrossIncome * multiplier;
+    gameState.money += profitBonus;
+  }
+
+  let totalIncome = totalGrossIncome + profitBonus;
   let netProfit = totalIncome - salaries;
 
   let balanceHtml = `<b style="font-size: 1.1em; color: var(--text-color);">Bilan du Jour ${gameState.day - 1}</b><br/>`;
   balanceHtml += `🟢 Entrées : +${totalIncome.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Frais: ${accountFees.toFixed(0)}, Intérêts: ${interestIncome.toFixed(0)}, Marchés: ${(hftDividends + traderProfit).toFixed(0)})</span><br/>`;
+  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${profitBonus.toFixed(2)} €</b><br/>`;
   balanceHtml += `🔴 Sorties : -${salaries.toFixed(2)} € <span style="font-size:0.8rem; color:#aaa;">(Salaires RH: ${salaries.toFixed(0)})</span><br/>`;
   balanceHtml += `<b style="font-size: 1.05em;">Résultat net : <span style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${netProfit >= 0 ? '+' : ''}${netProfit.toFixed(2)} €</span></b>`;
   

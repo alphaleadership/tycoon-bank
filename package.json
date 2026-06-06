@@ -12,7 +12,8 @@
     "appId": "com.tycoon.bank",
     "publish": [
       {
-        "provider": "github"
+        "provider": "github",
+        "releaseType": "release"
       }
     ],
     "win": {
