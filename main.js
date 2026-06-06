@@ -563,6 +563,16 @@ ipcMain.handle('next-day', () => {
   }
 
   let maxDiff = gameState.unlockedResearches.includes('r_lobbying') ? 0.05 : 0.03;
+  if (gameState.unlockedResearches.includes('r_bribery')) maxDiff += 0.02;
+  if (gameState.unlockedResearches.includes('r_mindcontrol')) maxDiff = 0.99;
+
+  if (gameState.unlockedResearches.includes('r_auto_rate')) {
+    gameState.interestRate = gameState.centralBankRate + maxDiff;
+  }
+
+  // Influence of the rate difference
+  let rateDiff = gameState.interestRate - gameState.centralBankRate;
+
   if (rateDiff > maxDiff + 0.001) {
     let lost = Math.floor(gameState.clients * 0.05) + 1;
     if (gameState.unlockedResearches.includes('r_loyalty')) lost = Math.floor(lost * 0.8);
