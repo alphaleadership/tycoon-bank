@@ -19,10 +19,19 @@
       </div>
       <div class="day-badge">Jour <span id="val-day">1</span></div>
     </header>
+
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-dashboard">Tableau de bord</button>
+      <button class="tab-btn" data-tab="tab-rh">RH & Opérations</button>
+      <button class="tab-btn" data-tab="tab-research">Laboratoire</button>
+      <button class="tab-btn" data-tab="tab-market">Bourse</button>
+    </nav>
     
     <main class="dashboard">
-      <div class="top-row">
-        <div class="card stats-card glass">
+      
+      <!-- TAB 1 : DASHBOARD (Stats & Logs) -->
+      <div id="tab-dashboard" class="tab-content active">
+        <div class="card stats-card glass" style="margin-bottom: 1.5rem;">
           <h2>Vos Finances</h2>
           <div class="stat-grid">
             <div class="stat-item">
@@ -56,7 +65,52 @@
           </div>
         </div>
 
-        <div class="card research-card glass">
+        <div class="card log-card glass" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Journal d'Activités</h2>
+            <button id="btn-next-day" class="btn next-day-btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Passer au Jour Suivant</button>
+          </div>
+          <div id="log-container" class="log-container">
+            <div class="log-entry">Bienvenue dans votre nouvelle banque.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2 : RH & OPÉRATIONS -->
+      <div id="tab-rh" class="tab-content" style="display: none;">
+        <div class="card actions-card glass" style="margin-bottom: 1.5rem;">
+          <h2>Ressources Humaines & Opérations</h2>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Colonne Marketing & Embauches de base -->
+            <div>
+              <h3 style="margin-top: 0;">Département Marketing</h3>
+              <button id="btn-marketing" class="btn primary-btn" style="width: 100%; margin-bottom: 0.5rem;">Lancer Campagne Marketing (5000 €)</button>
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <button id="btn-hire-marketer" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher Marketeur (150 €/j)</button>
+                <button id="btn-fire-marketer" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
+              </div>
+
+              <h3>Département RH & Prêts</h3>
+              <button id="btn-hire" class="btn primary-btn" style="width: 100%; margin-bottom: 0.5rem;">Embaucher Employé RH (100 €/j)</button>
+              <button id="btn-loan" class="btn primary-btn" style="width: 100%;">Accorder Prêts (Manuel)</button>
+            </div>
+
+            <!-- Colonne Banque Centrale -->
+            <div>
+              <h3 style="margin-top: 0;">Gestion des Taux</h3>
+              <div class="rate-input-group" style="margin-bottom: 1.5rem;">
+                <input type="number" id="input-rate" placeholder="Nouveau taux %" class="input-field">
+                <button id="btn-rate" class="btn secondary-btn">Changer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3 : LABORATOIRE -->
+      <div id="tab-research" class="tab-content" style="display: none;">
+        <div class="card research-card glass" style="margin-bottom: 1.5rem;">
           <h2>Laboratoire & Recherche</h2>
           <div class="stat-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
             <div class="stat-item">
@@ -69,7 +123,7 @@
             </div>
           </div>
           <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-            <button id="btn-hire-researcher" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher (150 €/j)</button>
+            <button id="btn-hire-researcher" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher Chercheur (150 €/j)</button>
             <button id="btn-fire-researcher" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
           </div>
           
@@ -79,8 +133,9 @@
         </div>
       </div>
 
-      <div class="market-row">
-        <div class="card market-card glass">
+      <!-- TAB 4 : BOURSE -->
+      <div id="tab-market" class="tab-content" style="display: none;">
+        <div class="card market-card glass" style="margin-bottom: 1.5rem;">
           <h2>Bourse & Marchés Financiers</h2>
           <div class="stat-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
             <div class="stat-item">
@@ -92,38 +147,12 @@
             <button id="btn-hire-trader" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher Trader (300 €/j)</button>
             <button id="btn-fire-trader" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
           </div>
-          <div class="stock-list" id="stock-list-container">
+          <div class="stock-list" id="stock-list-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
             <!-- Stocks injected here via JS -->
           </div>
         </div>
       </div>
 
-      <div class="actions-panel">
-        <div class="card actions-card glass">
-          <h2>Actions Stratégiques</h2>
-          <div class="action-buttons">
-            <button id="btn-marketing" class="btn primary-btn" style="margin-bottom: 0.5rem;">Lancer Campagne Marketing (5000 €)</button>
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-              <button id="btn-hire-marketer" class="btn secondary-btn" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Embaucher Marketeur (150 €/j)</button>
-              <button id="btn-fire-marketer" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
-            </div>
-            <button id="btn-hire" class="btn primary-btn">Embaucher Employé RH (100 €/j)</button>
-            <button id="btn-loan" class="btn primary-btn">Accorder Prêts</button>
-            <div class="rate-input-group">
-              <input type="number" id="input-rate" placeholder="Nouveau taux %" class="input-field">
-              <button id="btn-rate" class="btn secondary-btn">Changer</button>
-            </div>
-            <button id="btn-next-day" class="btn next-day-btn">Passer au Jour Suivant</button>
-          </div>
-        </div>
-        
-        <div class="card log-card glass">
-          <h2>Journal d'Activités</h2>
-          <div id="log-container" class="log-container">
-            <div class="log-entry">Bienvenue dans votre nouvelle banque.</div>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
   <script src="renderer.js"></script>

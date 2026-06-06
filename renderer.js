@@ -256,3 +256,15 @@ setInterval(async () => {
     }
   }
 }, 10000);
+
+
+// Tabs Management
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    btn.classList.add('active');
+    const target = document.getElementById(btn.getAttribute('data-tab'));
+    if (target) target.style.display = 'block';
+  });
+});
