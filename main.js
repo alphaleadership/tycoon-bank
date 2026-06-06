@@ -9,7 +9,10 @@ const RESEARCH_TREE = {
   'r_marketing': { id: 'r_marketing', name: 'Marketing Ciblé', cost: 10, desc: 'Améliore les campagnes marketing', req: [] },
   'r_risk': { id: 'r_risk', name: 'Analyse des Risques', cost: 20, desc: 'Permet de prêter plus sans risque', req: [] },
   'r_online': { id: 'r_online', name: 'Banque en Ligne', cost: 50, desc: 'Gain passif de clients', req: ['r_marketing'] },
+  'r_targeted_ads': { id: 'r_targeted_ads', name: 'Publicités Ciblées', cost: 180, desc: 'Réduit le coût des campagnes marketing de 40%', req: ['r_marketing'] },
   'r_viral_marketing': { id: 'r_viral_marketing', name: 'Marketing Viral', cost: 150, desc: 'Les campagnes marketing rapportent deux fois plus de clients', req: ['r_marketing'] },
+  'r_auto_marketing': { id: 'r_auto_marketing', name: 'Marketing Automatisé', cost: 250, desc: 'Lance automatiquement une campagne par jour si les fonds le permettent', req: ['r_viral_marketing'] },
+  'r_influencer': { id: 'r_influencer', name: "Sponsoring d'Influenceurs", cost: 350, desc: "Les campagnes ont 20% de chances d'avoir un effet critique (x3 clients)", req: ['r_viral_marketing'] },
   'r_premium': { id: 'r_premium', name: 'Comptes Premium', cost: 200, desc: 'Double les frais de tenue de compte (10 € par client)', req: ['r_online'] },
   'r_lab_equip': { id: 'r_lab_equip', name: 'Équipement de Pointe', cost: 100, desc: 'Les chercheurs produisent 3 RP/jour au lieu de 2', req: [] },
   'r_university': { id: 'r_university', name: 'Partenariat Universitaire', cost: 200, desc: 'Génère 5 RP passivement chaque jour', req: ['r_lab_equip'] },
@@ -101,14 +104,23 @@ app.on('window-all-closed', function () {
 ipcMain.handle('get-state', () => gameState);
 
 ipcMain.handle('action-marketing', () => {
-  const cost = 500 * gameState.marketingLevel;
+  let cost = 500 * gameState.marketingLevel;
+  if (gameState.unlockedResearches.includes('r_targeted_ads')) cost *= 0.6;
+  
   if (gameState.money >= cost) {
     gameState.money -= cost;
     gameState.marketingLevel++;
     let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
     if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
+    
+    let critical = false;
+    if (gameState.unlockedResearches.includes('r_influencer') && Math.random() < 0.2) {
+      gained *= 3;
+      critical = true;
+    }
+    
     gameState.clients += gained;
-    return { success: true, message: `Campagne réussie ! +${gained} clients.` };
+    return { success: true, message: `Campagne réussie ! +${gained} clients.${critical ? ' (Coup de Maître !)' : ''}` };
   }
   return { success: false, message: "Fonds insuffisants." };
 });
@@ -319,6 +331,30 @@ ipcMain.handle('next-day', () => {
   let employeeEfficiency = gameState.unlockedResearches.includes('r_hr') ? 50 : 30;
   
   // Auto-recrutement et licenciement si RH débloqué
+  if (gameState.unlockedResearches.includes('r_online')) {
+    let passiveGained = Math.floor(Math.random() * 5 + 1);
+    gameState.clients += passiveGained;
+  }
+  
+  // Marketing automatisé
+  if (gameState.unlockedResearches.includes('r_auto_marketing')) {
+    let autoCost = 500 * gameState.marketingLevel;
+    if (gameState.unlockedResearches.includes('r_targeted_ads')) autoCost *= 0.6;
+    if (gameState.money >= autoCost) {
+      gameState.money -= autoCost;
+      gameState.marketingLevel++;
+      let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
+      if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
+      let critical = false;
+      if (gameState.unlockedResearches.includes('r_influencer') && Math.random() < 0.2) {
+        gained *= 3;
+        critical = true;
+      }
+      gameState.clients += gained;
+      cbMessage += ` 📣 Auto-Marketing: +${gained} clients${critical ? ' (Coup de Maître !)' : ''}.`;
+    }
+  }
+
   if (gameState.unlockedResearches.includes('r_hr')) {
     let hired = 0;
     while (gameState.clients > gameState.employees * employeeEfficiency) {
