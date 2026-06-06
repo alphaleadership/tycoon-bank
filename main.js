@@ -525,32 +525,50 @@ ipcMain.handle('next-day', () => {
   let traderProfit = gameState.traders * 150; // Revenu de base garanti par trader
   if (gameState.traders > 0) {
     let salesProfit = 0;
-    for (let i = 0; i < gameState.traders; i++) {
-       let syms = Object.keys(gameState.stocks);
-       let sym = syms[Math.floor(Math.random() * syms.length)];
-       let stock = gameState.stocks[sym];
-       let trend = 0;
-       if (stock.history.length > 1) {
-          trend = stock.price - stock.history[stock.history.length - 2];
-       }
-       if (trend > 0 && gameState.portfolio[sym] > 0) {
-          // Sell 1 share
-          gameState.portfolio[sym]--;
-          salesProfit += stock.price;
-       } else if (trend <= 0 && gameState.money >= stock.price) {
-          // Buy 1 share
-          gameState.money -= stock.price;
-          gameState.portfolio[sym]++;
-       }
+    let syms = Object.keys(gameState.stocks);
+    let actionsPerStock = Math.floor(gameState.traders / syms.length);
+    let leftoverActions = gameState.traders % syms.length;
+
+    for (let sym of syms) {
+      let stock = gameState.stocks[sym];
+      let trend = 0;
+      if (stock.history.length > 1) {
+         trend = stock.price - stock.history[stock.history.length - 2];
+      }
+      
+      let actions = actionsPerStock;
+      if (leftoverActions > 0) {
+        actions++;
+        leftoverActions--;
+      }
+      
+      if (actions > 0) {
+        if (trend > 0) {
+           // Les traders vendent s'ils possèdent l'action
+           let sharesToSell = Math.min(actions, gameState.portfolio[sym]);
+           if (sharesToSell > 0) {
+             gameState.portfolio[sym] -= sharesToSell;
+             salesProfit += sharesToSell * stock.price;
+           }
+        } else if (trend <= 0) {
+           // Les traders achètent si les fonds le permettent
+           let maxAffordable = Math.floor(gameState.money / stock.price);
+           let sharesToBuy = Math.min(actions, maxAffordable);
+           if (sharesToBuy > 0) {
+             gameState.money -= sharesToBuy * stock.price;
+             gameState.portfolio[sym] += sharesToBuy;
+           }
+        }
+      }
     }
     
     traderProfit += salesProfit;
     gameState.money += traderProfit;
     
     if (salesProfit > 0) {
-      traderMessage = ` 📈 Traders : +${traderProfit.toFixed(2)} € (dont ${salesProfit.toFixed(2)} € de ventes).`;
+      traderMessage = ` 📈 Traders : +${formatMoney(traderProfit)} (dont ${formatMoney(salesProfit)} de ventes).`;
     } else {
-      traderMessage = ` 📈 Traders (Revenu Garanti) : +${traderProfit.toFixed(2)} €.`;
+      traderMessage = ` 📈 Traders (Revenu Garanti) : +${formatMoney(traderProfit)}.`;
     }
   }
 
