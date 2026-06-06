@@ -135,6 +135,11 @@ const addLog = (message) => {
   entry.className = 'log-entry';
   entry.innerHTML = `[Jour ${document.getElementById('val-day').textContent}] ${message}`;
   logContainer.prepend(entry);
+  
+  // Prévention des freezes : limiter l'historique à 50 messages
+  while (logContainer.children.length > 50) {
+    logContainer.removeChild(logContainer.lastChild);
+  }
 };
 
 document.getElementById('btn-marketing').addEventListener('click', async () => {
