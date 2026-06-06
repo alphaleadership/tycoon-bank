@@ -772,11 +772,14 @@ ipcMain.handle('next-day', () => {
   let allDone = Object.keys(gameState.researchTree).filter(k => !gameState.researchTree[k].repeatable).every(k => gameState.unlockedResearches.includes(k));
   let profitBonus = 0;
   let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
+  let consumedRP = 0;
   
-  if (allDone) {
+  if (allDone && gameState.researchPoints > 0) {
     let multiplier = gameState.researchPoints * 0.001; // +0.1% de rentabilité par RP
     profitBonus = totalGrossIncome * multiplier;
     gameState.money += profitBonus;
+    consumedRP = gameState.researchPoints;
+    gameState.researchPoints = 0;
   }
 
   let randomEventMessage = "";
@@ -806,7 +809,7 @@ ipcMain.handle('next-day', () => {
   incomeDetails += `)`;
   balanceHtml += `🟢 Entrées : +${formatMoney(totalIncome)} <span style="font-size:0.8rem; color:#aaa;">${incomeDetails}</span><br/>`;
   
-  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(gameState.researchPoints * 0.1).toFixed(1)}%) : +${formatMoney(profitBonus)}</b><br/>`;
+  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(consumedRP * 0.1).toFixed(1)}%) : +${formatMoney(profitBonus)}</b><br/>`;
   
   let expenseDetails = `(Salaires: ${formatMoney(salaries)}`;
   if (eventFinancialImpact < 0) expenseDetails += `, Événement: ${formatMoney(-eventFinancialImpact)}`;
