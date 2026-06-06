@@ -184,6 +184,11 @@ app.whenReady().then(() => {
   setInterval(() => {
     autoUpdater.checkForUpdatesAndNotify();
   }, 15 * 60 * 1000);
+
+  // Redémarrer l'application automatiquement une fois la mise à jour téléchargée
+  autoUpdater.on('update-downloaded', () => {
+    autoUpdater.quitAndInstall();
+  });
 });
 
 app.on('window-all-closed', function () {
