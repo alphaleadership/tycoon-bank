@@ -30,7 +30,19 @@ const RESEARCH_TREE = {
 const STOCKS = {
   'TECH': { name: 'TechCorp', price: 150, volatility: 0.10, history: [150] },
   'INDUS': { name: 'IndusCorp', price: 80, volatility: 0.05, history: [80] },
-  'GOLD': { name: 'SafeGold', price: 300, volatility: 0.02, history: [300] }
+  'GOLD': { name: 'SafeGold', price: 300, volatility: 0.02, history: [300] },
+  'HEALTH': { name: 'PharmaLife', price: 120, volatility: 0.08, history: [120] },
+  'AUTO': { name: 'MotorsGen', price: 90, volatility: 0.07, history: [90] },
+  'ENERGY': { name: 'EcoPower', price: 60, volatility: 0.06, history: [60] },
+  'FOOD': { name: 'TastyFoods', price: 40, volatility: 0.03, history: [40] },
+  'REAL': { name: 'PrimeImmo', price: 200, volatility: 0.04, history: [200] },
+  'CRYPTO': { name: 'BitCoin', price: 500, volatility: 0.25, history: [500] },
+  'AERO': { name: 'SkyTravel', price: 110, volatility: 0.09, history: [110] },
+  'MEDIA': { name: 'StreamFlix', price: 130, volatility: 0.12, history: [130] },
+  'RETAIL': { name: 'GlobalMart', price: 75, volatility: 0.05, history: [75] },
+  'DEFENSE': { name: 'ArmorCorp', price: 180, volatility: 0.04, history: [180] },
+  'LUXURY': { name: 'Elegance', price: 250, volatility: 0.06, history: [250] },
+  'AI': { name: 'NeuroSys', price: 350, volatility: 0.15, history: [350] }
 };
 
 let gameState = {
@@ -47,8 +59,8 @@ let gameState = {
   marketingLevel: 1,
   unlockedResearches: [],
   researchTree: RESEARCH_TREE,
-  stocks: STOCKS,
-  portfolio: { 'TECH': 0, 'INDUS': 0, 'GOLD': 0 }
+  stocks: JSON.parse(JSON.stringify(STOCKS)),
+  portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
 };
 
 function createWindow() {
@@ -147,6 +159,12 @@ ipcMain.handle('load-game', () => {
       // Mises à jour de compatibilité avec les anciennes sauvegardes
       gameState.researchTree = RESEARCH_TREE;
       if (gameState.traders === undefined) gameState.traders = 0;
+      
+      // Injecter les nouvelles actions si elles n'existent pas dans la sauvegarde
+      for (let s in STOCKS) {
+        if (gameState.portfolio[s] === undefined) gameState.portfolio[s] = 0;
+        if (!gameState.stocks[s]) gameState.stocks[s] = JSON.parse(JSON.stringify(STOCKS[s]));
+      }
       
       return { success: true, message: "Partie chargée avec succès !" };
     } else {
