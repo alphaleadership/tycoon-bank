@@ -252,6 +252,10 @@ document.getElementById('btn-hard-reset').addEventListener('click', async () => 
   }
 });
 
+document.getElementById('btn-sponsor').addEventListener('click', () => {
+  window.electronAPI.openSponsor();
+});
+
 // Init
 updateUI();
 

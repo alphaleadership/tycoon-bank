@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
@@ -344,6 +344,10 @@ ipcMain.handle('hard-reset', () => {
     portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
   };
   return { success: true, message: "La partie a été réinitialisée de zéro !" };
+});
+
+ipcMain.handle('open-sponsor', () => {
+  shell.openExternal('https://github.com/sponsors/alphaleadership');
 });
 
 ipcMain.handle('action-marketing', () => {
