@@ -4,6 +4,17 @@ const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
 const formatNumber = (val) => {
+  if (val >= 1e66) return (val / 1e66).toFixed(2) + ' Uv';
+  if (val >= 1e63) return (val / 1e63).toFixed(2) + ' V';
+  if (val >= 1e60) return (val / 1e60).toFixed(2) + ' Nd';
+  if (val >= 1e57) return (val / 1e57).toFixed(2) + ' Od';
+  if (val >= 1e54) return (val / 1e54).toFixed(2) + ' Spd';
+  if (val >= 1e51) return (val / 1e51).toFixed(2) + ' Sxd';
+  if (val >= 1e48) return (val / 1e48).toFixed(2) + ' Qid';
+  if (val >= 1e45) return (val / 1e45).toFixed(2) + ' Qd';
+  if (val >= 1e42) return (val / 1e42).toFixed(2) + ' Td';
+  if (val >= 1e39) return (val / 1e39).toFixed(2) + ' Dd';
+  if (val >= 1e36) return (val / 1e36).toFixed(2) + ' Ud';
   if (val >= 1e33) return (val / 1e33).toFixed(2) + ' Dc';
   if (val >= 1e30) return (val / 1e30).toFixed(2) + ' No';
   if (val >= 1e27) return (val / 1e27).toFixed(2) + ' Oc';
@@ -533,15 +544,6 @@ ipcMain.handle('next-day', () => {
   }
 
   let maxDiff = gameState.unlockedResearches.includes('r_lobbying') ? 0.05 : 0.03;
-  if (gameState.unlockedResearches.includes('r_bribery')) maxDiff += 0.02;
-  
-  if (gameState.unlockedResearches.includes('r_auto_rate')) {
-    gameState.interestRate = gameState.centralBankRate + maxDiff;
-  }
-
-  // Influence of the rate difference
-  let rateDiff = gameState.interestRate - gameState.centralBankRate;
-  // Ajout d'une tolérance de 0.001 pour éviter les erreurs de flottants (ex: 0.050000001 > 0.05)
   if (rateDiff > maxDiff + 0.001) {
     let lost = Math.floor(gameState.clients * 0.05) + 1;
     if (gameState.unlockedResearches.includes('r_loyalty')) lost = Math.floor(lost * 0.8);
