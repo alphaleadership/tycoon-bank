@@ -24,6 +24,10 @@ let researchNodesView = null;
 let researchEdgesView = null;
 let currentResearchFilter = 'Finance';
 
+let endgameNetwork = null;
+let endgameNodes = null;
+let endgameEdges = null;
+
 function getNodeCategory(id) {
   if (id.includes('tech') || ['r_quantum', 'r_ai', 'r_hft_ai', 'r_roboadvisor', 'r_neural_trading', 'r_datamining_lab', 'r_quant'].includes(id)) return 'Tech';
   if (id.includes('bio') || id === 'r_cloning') return 'Bio';
@@ -176,6 +180,70 @@ const renderResearchTree = (state) => {
   researchNodes.update(updates);
 };
 
+const updateEndgameTree = (state) => {
+  const container = document.getElementById('endgame-tree-container');
+  if (!container) return;
+
+  if (!endgameNetwork) {
+    endgameNodes = new vis.DataSet();
+    endgameEdges = new vis.DataSet();
+    
+    let edges = [];
+    let nodes = [];
+    
+    for (const [id, r] of Object.entries(state.endgameTree)) {
+      let icon = '🌌';
+      nodes.push({ id: id, label: icon + ' ' + r.name + '\n' + formatNumber(r.cost) + ' DM', title: r.desc });
+      for (const req of r.req) {
+        edges.push({ from: req, to: id, arrows: 'to' });
+      }
+    }
+    
+    endgameNodes.add(nodes);
+    endgameEdges.add(edges);
+    
+    const data = { nodes: endgameNodes, edges: endgameEdges };
+    const options = {
+      layout: { hierarchical: { direction: 'UD', sortMethod: 'directed', nodeSpacing: 250, levelSeparation: 150 } },
+      nodes: { shape: 'box', margin: 12, font: { color: '#ffffff', face: 'Inter', multi: 'html', size: 14 }, borderWidth: 2, shadow: { enabled: true, color: 'rgba(155, 89, 182, 0.5)', size: 5, x: 2, y: 2 } },
+      edges: { color: { color: 'rgba(155, 89, 182, 0.5)' }, smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 }, arrows: { to: { enabled: true, scaleFactor: 0.5 } } },
+      physics: { enabled: true, hierarchicalRepulsion: { nodeDistance: 200 } },
+      interaction: { hover: true, dragNodes: true, zoomView: true, dragView: true }
+    };
+    endgameNetwork = new vis.Network(container, data, options);
+    
+    endgameNetwork.on('doubleClick', async function (params) {
+      if (params.nodes.length > 0) {
+        window.doEndgameResearch(params.nodes[0]);
+      }
+    });
+  }
+  
+  const updates = [];
+  for (const [id, r] of Object.entries(state.endgameTree)) {
+    const isUnlocked = state.endgameResearches.includes(id);
+    const hasReq = r.req.every(reqId => state.endgameResearches.includes(reqId));
+    
+    let background = '#34495e'; // default
+    let border = '#2c3e50';
+    let titleStr = r.desc;
+    
+    if (isUnlocked) {
+      background = '#8e44ad'; border = '#9b59b6';
+      titleStr += '\nStatus: Débloqué';
+    } else if (hasReq && state.darkMatter >= r.cost) {
+      background = '#9b59b6'; border = '#8e44ad';
+      titleStr += '\nStatus: Disponible (Double-cliquez)';
+    } else if (hasReq) {
+      background = '#c0392b'; border = '#e74c3c';
+      titleStr += '\nStatus: Fonds insuffisants';
+    }
+    
+    updates.push({ id: id, color: { background: background, border: border, highlight: { background: background, border: '#ecf0f1' } }, title: titleStr });
+  }
+  endgameNodes.update(updates);
+};
+
 const renderStockMarket = (state) => {
   const container = document.getElementById('stock-list-container');
   container.innerHTML = '';
@@ -218,6 +286,12 @@ const renderStockMarket = (state) => {
 
 window.doResearch = async (id) => {
   const res = await window.electronAPI.unlockResearch(id);
+  addLog(res.message);
+  updateUI();
+};
+
+window.doEndgameResearch = async (id) => {
+  const res = await window.electronAPI.unlockEndgameResearch(id);
   addLog(res.message);
   updateUI();
 };
@@ -285,10 +359,16 @@ const updateUI = async () => {
     .every(k => state.unlockedResearches.includes(k));
   if (allDone && document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'block';
+    if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'inline-block';
+    if (document.getElementById('val-dm')) document.getElementById('val-dm').textContent = formatNumber(state.darkMatter || 0);
     document.getElementById('lvl-mega-marketing').textContent = state.megaMarketing || 0;
     document.getElementById('lvl-mega-lobbying').textContent = state.megaLobbying || 0;
+    
+    // We only update endgame tree if the tab is visible or we just want to keep it updated in background
+    updateEndgameTree(state);
   } else if (document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'none';
+    if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'none';
   }
   document.getElementById('val-marketing').innerText = `Niv ${state.marketingLevel} / ${formatNumber(state.marketers)} Emp`;
   
@@ -412,6 +492,14 @@ if (document.getElementById('btn-mega-buy-max-rp')) {
   });
   document.getElementById('btn-mega-lobbying').addEventListener('click', async () => {
     const res = await window.electronAPI.buyMegaLobbying();
+    addLog(res.message);
+    updateUI();
+  });
+}
+
+if (document.getElementById('btn-buy-dm')) {
+  document.getElementById('btn-buy-dm').addEventListener('click', async () => {
+    const res = await window.electronAPI.buyDM();
     addLog(res.message);
     updateUI();
   });

@@ -34,6 +34,7 @@
       <button class="tab-btn" data-tab="tab-market">Bourse</button>
       <button class="tab-btn" data-tab="tab-personnel">Personnel</button>
       <button class="tab-btn" data-tab="tab-settings">Paramètres</button>
+      <button class="tab-btn" id="nav-ascension" data-tab="tab-ascension" style="display: none; color: #9b59b6; font-weight: bold; border-color: #9b59b6;">Ascension 🌌</button>
     </nav>
     
     <main class="dashboard">
@@ -244,6 +245,27 @@
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; margin: 1rem 0;">
             <p style="color: var(--text-color); margin: 0;">Vous aimez ce jeu ? Soutenez le développeur !</p>
             <button id="btn-sponsor" class="btn primary-btn" style="padding: 0.8rem; font-size: 1rem; font-weight: bold;">❤️ Sponsoriser sur GitHub</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6 : ASCENSION -->
+      <div id="tab-ascension" class="tab-content" style="display: none;">
+        <div class="card research-card glass" style="margin-bottom: 1.5rem; border: 1px solid #9b59b6;">
+          <h2 style="color: #9b59b6;">Ascension Quantique (Endgame)</h2>
+          <p style="color: #bdc3c7;">Vous avez conquis le monde. Il est temps de conquérir le multivers.</p>
+          <div class="stat-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
+            <div class="stat-item">
+              <span class="stat-label">Matière Noire (DM)</span>
+              <span class="stat-value" style="color: #9b59b6;" id="val-dm">0</span>
+            </div>
+            <div class="stat-item" style="display: flex; align-items: center; justify-content: center;">
+              <button id="btn-buy-dm" class="btn primary-btn" style="width: 100%; background: rgba(155, 89, 182, 0.2); border-color: #9b59b6;">Générer 1 DM (1 Trillion €)</button>
+            </div>
+          </div>
+          
+          <div class="research-tree" id="endgame-tree-container" style="height: 600px; border: 1px solid rgba(155, 89, 182, 0.3); border-radius: 8px; background: rgba(0,0,0,0.4);">
+            <!-- Endgame Research items injected here via JS -->
           </div>
         </div>
       </div>

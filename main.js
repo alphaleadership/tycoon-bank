@@ -284,6 +284,15 @@ const RANDOM_EVENTS = [
 
 ];
 
+const ENDGAME_RESEARCH_TREE = {
+  'e_base': { id: 'e_base', name: 'Ascension Quantique', cost: 1, desc: 'Lier la banque au multivers. Débloque le véritable potentiel.', req: [] },
+  'e_marketing': { id: 'e_marketing', name: 'Marketing Multiversel', cost: 5, desc: 'Attire des clients issus d\'autres dimensions (+10 Millions de clients)', req: ['e_base'] },
+  'e_finance': { id: 'e_finance', name: 'Singularité Financière', cost: 10, desc: 'Taux d\'intérêt absolu: Revenus des prêts multipliés par 10', req: ['e_base'] },
+  'e_tech': { id: 'e_tech', name: 'IA Divine', cost: 20, desc: 'Une IA transcendante gère les marchés. Dividendes x100', req: ['e_finance', 'e_marketing'] },
+  'e_dm': { id: 'e_dm', name: 'Condensateur Stellaire', cost: 50, desc: 'Produit automatiquement 1 Matière Noire (DM) par jour.', req: ['e_tech'] },
+  'e_auto_dm': { id: 'e_auto_dm', name: 'Extraction Parallèle', cost: 100, desc: 'L\'extraction de DM est doublée (2 DM / jour)', req: ['e_dm'] }
+};
+
 let gameState = {
   day: 1,
   money: 100000,
@@ -302,8 +311,11 @@ let gameState = {
   autoConsumeRPEnabled: true,
   megaMarketing: 0,
   megaLobbying: 0,
+  darkMatter: 0,
+  endgameResearches: [],
   unlockedResearches: [],
   researchTree: RESEARCH_TREE,
+  endgameTree: ENDGAME_RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
   portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
 };
@@ -390,8 +402,11 @@ ipcMain.handle('hard-reset', () => {
     autoConsumeRPEnabled: true,
     megaMarketing: 0,
     megaLobbying: 0,
+    darkMatter: 0,
+    endgameResearches: [],
     unlockedResearches: [],
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
+    endgameTree: JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
     portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
   };
@@ -781,6 +796,37 @@ ipcMain.handle('buy-mega-lobbying', () => {
   return { success: false, message: `Fonds insuffisants. Il vous faut ${formatMoney(cost)}.` };
 });
 
+ipcMain.handle('buy-dm', () => {
+  if (gameState.money >= 1000000000000) { // 1 Trillion
+    gameState.money -= 1000000000000;
+    gameState.darkMatter = (gameState.darkMatter || 0) + 1;
+    return { success: true, message: "1 Matière Noire générée ! (-1 Trillion €)" };
+  }
+  return { success: false, message: "Vous n'avez pas assez d'argent (1 Trillion € requis)." };
+});
+
+ipcMain.handle('unlock-endgame-research', (event, id) => {
+  const r = ENDGAME_RESEARCH_TREE[id];
+  if(!r) return { success: false, message: "Recherche introuvable." };
+  if(gameState.endgameResearches.includes(id)) return { success: false, message: "Déjà débloqué." };
+  
+  const hasReq = r.req.every(reqId => gameState.endgameResearches.includes(reqId));
+  if (!hasReq) return { success: false, message: "Prérequis manquants." };
+
+  if (gameState.darkMatter >= r.cost) {
+    gameState.darkMatter -= r.cost;
+    gameState.endgameResearches.push(id);
+    
+    // Effets immédiats
+    if (id === 'e_marketing') {
+      gameState.clients += 10000000;
+    }
+    
+    return { success: true, message: `Ascension : ${r.name} débloquée !` };
+  }
+  return { success: false, message: "Matière Noire (DM) insuffisante." };
+});
+
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
   const stock = gameState.stocks[symbol];
   if(!stock) return { success: false, message: "Action invalide." };
@@ -826,7 +872,7 @@ ipcMain.handle('next-day', () => {
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
-  const interestIncome = gameState.loansOut * gameState.interestRate;
+  const interestIncome = gameState.loansOut * gameState.interestRate * (gameState.endgameResearches.includes('e_finance') ? 10 : 1);
   gameState.money += interestIncome;
   
   const principalRepayment = gameState.loansOut * 0.1;
@@ -834,6 +880,7 @@ ipcMain.handle('next-day', () => {
   gameState.loansOut -= principalRepayment;
   
   let newClients = Math.floor(Math.random() * gameState.marketingLevel * 5);
+  if (gameState.endgameResearches.includes('e_marketing')) newClients *= 10;
   if(gameState.unlockedResearches.includes('r_online')) {
     newClients += 5; // Passive clients
   }
@@ -1050,6 +1097,7 @@ ipcMain.handle('next-day', () => {
   if (gameState.unlockedResearches.includes('r_ai_research')) rpPerResearcher *= 2;
   if (gameState.unlockedResearches.includes('r_datamining')) rpPerResearcher += 1;
   if (gameState.unlockedResearches.includes('r_neural_link')) rpPerResearcher += 5;
+  if (gameState.endgameResearches.includes('e_tech')) rpPerResearcher *= 10;
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
   if (gameState.unlockedResearches.includes('r_university')) {
@@ -1094,8 +1142,15 @@ ipcMain.handle('next-day', () => {
   }
 
   if (hftDividends > 0) {
+    if (gameState.endgameResearches.includes('e_tech')) hftDividends *= 100;
     gameState.money += hftDividends;
     cbMessage += ` 💰 Dividendes HFT: +${hftDividends.toFixed(2)} €.`;
+  }
+
+  // Génération de Matière Noire Automatique
+  if (gameState.endgameResearches.includes('e_dm')) {
+    let dmGain = gameState.endgameResearches.includes('e_auto_dm') ? 2 : 1;
+    gameState.darkMatter = (gameState.darkMatter || 0) + dmGain;
   }
 
   let traderMessage = "";
