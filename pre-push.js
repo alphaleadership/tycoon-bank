@@ -11,8 +11,16 @@ try {
   // Increment version
   console.log('Incrementing version...');
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  let parts = pkg.version.split('.');
-  parts[2] = parseInt(parts[2], 10) + 1;
+  let parts = pkg.version.split('.').map(p => parseInt(p, 10));
+  parts[2] += 1;
+  if (parts[2] >= 10) {
+    parts[2] = 0;
+    parts[1] += 1;
+    if (parts[1] >= 10) {
+      parts[1] = 0;
+      parts[0] += 1;
+    }
+  }
   pkg.version = parts.join('.');
   fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
   console.log('Version bumped to ' + pkg.version);
