@@ -89,8 +89,7 @@ const renderResearchTree = (state) => {
       physics: {
         enabled: true,
         hierarchicalRepulsion: {
-          nodeDistance: 200,
-          treeSpacing: 300
+          nodeDistance: 200
         }
       },
       interaction: { hover: true, dragNodes: true, zoomView: true, dragView: true }

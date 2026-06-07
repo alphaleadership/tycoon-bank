@@ -555,6 +555,12 @@ ipcMain.handle('action-loan', () => {
   return { success: false, message: "Pas de liquidités disponibles." };
 });
 
+ipcMain.handle('toggle-auto-loan', () => {
+  if (gameState.autoLoanEnabled === undefined) gameState.autoLoanEnabled = true;
+  gameState.autoLoanEnabled = !gameState.autoLoanEnabled;
+  return { success: true, message: `Prêts automatiques : ${gameState.autoLoanEnabled ? 'ON' : 'OFF'}`, status: gameState.autoLoanEnabled };
+});
+
 ipcMain.handle('set-rate', (event, rate) => {
   const r = parseFloat(rate);
   if (!isNaN(r) && r >= 0) {
