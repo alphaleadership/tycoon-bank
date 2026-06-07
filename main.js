@@ -449,12 +449,12 @@ ipcMain.handle('action-fire-researcher', () => {
 });
 
 ipcMain.handle('action-hire-trader', () => {
-  if (gameState.money >= 300) {
-    gameState.money -= 300;
+  if (gameState.money >= 5000) {
+    gameState.money -= 5000;
     gameState.traders++;
-    return { success: true, message: "Trader recruté." };
+    return { success: true, message: "Vous avez embauché un Trader (Coût: 5000 €, Salaire: 300 €/jour)." };
   }
-  return { success: false, message: "Fonds insuffisants (300 €)." };
+  return { success: false, message: "Fonds insuffisants (5000 € requis)." };
 });
 
 ipcMain.handle('action-fire-trader', () => {
@@ -744,10 +744,10 @@ ipcMain.handle('next-day', () => {
     let hiredTraders = 0;
     if (gameState.traders < desiredTraders) {
       let toHire = desiredTraders - gameState.traders;
-      if (gameState.money >= toHire * 300) {
-        gameState.money -= toHire * 300;
-        hiredTraders = toHire;
-        gameState.traders = desiredTraders;
+      if (gameState.money >= toHire * 5000) {
+        gameState.money -= toHire * 5000;
+        gameState.traders += toHire;
+        cbMessage += ` 📈 RH: ${toHire} Traders embauchés automatiquement.`;
       }
     }
     
@@ -955,12 +955,16 @@ ipcMain.handle('next-day', () => {
   let consumedRP = 0;
   
   if (allDone && gameState.researchPoints > 0) {
-    let multiplier = gameState.researchPoints * 0.001; // +0.1% de rentabilité par RP
+    let multiplier = Math.log2(1 + gameState.researchPoints) * 0.05; // Échelle logarithmique pour éviter l'explosion
     profitBonus = totalGrossIncome * multiplier;
     gameState.money += profitBonus;
     consumedRP = gameState.researchPoints;
     gameState.researchPoints = 0;
   }
+  
+  // Hard cap pour éviter le dépassement (Infinity)
+  if (gameState.money > 1e66) gameState.money = 1e66;
+  if (gameState.clients > 1e66) gameState.clients = 1e66;
 
   let randomEventMessage = "";
   let eventFinancialImpact = 0;
@@ -989,7 +993,10 @@ ipcMain.handle('next-day', () => {
   incomeDetails += `)`;
   balanceHtml += `🟢 Entrées : +${formatMoney(totalIncome)} <span style="font-size:0.8rem; color:#aaa;">${incomeDetails}</span><br/>`;
   
-  if (profitBonus > 0) balanceHtml += `✨ <b>Bonus Scientifique (+${(consumedRP * 0.1).toFixed(1)}%) : +${formatMoney(profitBonus)}</b><br/>`;
+  if (profitBonus > 0) {
+    let bonusPercent = (Math.log2(1 + consumedRP) * 5).toFixed(1);
+    balanceHtml += `✨ <b>Bonus Scientifique (+${bonusPercent}%) : +${formatMoney(profitBonus)}</b><br/>`;
+  }
   
   let expenseDetails = `(Salaires: ${formatMoney(salaries)}`;
   if (eventFinancialImpact < 0) expenseDetails += `, Événement: ${formatMoney(-eventFinancialImpact)}`;
