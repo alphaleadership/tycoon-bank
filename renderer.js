@@ -364,6 +364,19 @@ const updateUI = async () => {
     document.getElementById('lvl-mega-marketing').textContent = state.megaMarketing || 0;
     document.getElementById('lvl-mega-lobbying').textContent = state.megaLobbying || 0;
     
+    const missingDmSpan = document.getElementById('val-dm-missing');
+    if (missingDmSpan) {
+      const dmCost = 1000000000000;
+      if (state.money >= dmCost) {
+        missingDmSpan.textContent = "Prêt pour l'Ascension !";
+        missingDmSpan.style.color = "#2ecc71";
+      } else {
+        const missingPercent = ((dmCost - state.money) / dmCost) * 100;
+        missingDmSpan.textContent = `(Il manque ${missingPercent.toFixed(1)}%)`;
+        missingDmSpan.style.color = "#e74c3c";
+      }
+    }
+    
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
     updateEndgameTree(state);
   } else if (document.getElementById('endgame-upgrades')) {
