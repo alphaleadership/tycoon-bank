@@ -382,6 +382,12 @@ document.getElementById('btn-sell-rp').addEventListener('click', async () => {
   updateUI();
 });
 
+document.getElementById('btn-sell-all-rp').addEventListener('click', async () => {
+  const res = await window.electronAPI.sellAllRP();
+  addLog(res.message);
+  updateUI();
+});
+
 document.getElementById('btn-toggle-auto-consume-rp').addEventListener('click', async () => {
   const res = await window.electronAPI.toggleAutoConsumeRP();
   addLog(res.message);

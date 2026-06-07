@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleAutoConsumeRP: () => ipcRenderer.invoke('toggle-auto-consume-rp'),
   buyRP: () => ipcRenderer.invoke('buy-rp'),
   sellRP: () => ipcRenderer.invoke('sell-rp'),
+  sellAllRP: () => ipcRenderer.invoke('sell-all-rp'),
   buyStock: (symbol, amount) => ipcRenderer.invoke('buy-stock', { symbol, amount }),
   sellStock: (symbol, amount) => ipcRenderer.invoke('sell-stock', { symbol, amount }),
   nextDay: () => ipcRenderer.invoke('next-day'),

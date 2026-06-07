@@ -716,6 +716,17 @@ ipcMain.handle('sell-rp', () => {
   return { success: false, message: "Vous n'avez pas assez de RP à vendre (100 RP requis)." };
 });
 
+ipcMain.handle('sell-all-rp', () => {
+  if (gameState.researchPoints > 0) {
+    let rpToSell = gameState.researchPoints;
+    let earned = rpToSell * 500;
+    gameState.researchPoints = 0;
+    gameState.money += earned;
+    return { success: true, message: `Vente de ${formatNumber(rpToSell)} RP réussie (+${formatMoney(earned)}).` };
+  }
+  return { success: false, message: "Vous n'avez aucun RP à vendre." };
+});
+
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
   const stock = gameState.stocks[symbol];
   if(!stock) return { success: false, message: "Action invalide." };
