@@ -20,6 +20,16 @@ const formatMoney = (val) => {
 let researchNetwork = null;
 let researchNodes = null;
 let researchEdges = null;
+let researchNodesView = null;
+let researchEdgesView = null;
+let currentResearchFilter = 'Finance';
+
+function getNodeCategory(id) {
+  if (id.includes('tech') || ['r_quantum', 'r_ai', 'r_hft_ai', 'r_roboadvisor', 'r_neural_trading', 'r_datamining_lab', 'r_quant'].includes(id)) return 'Tech';
+  if (id.includes('bio') || id === 'r_cloning') return 'Bio';
+  if (id.includes('cosmic') || id === 'r_moon' || id === 'r_mars') return 'Cosmic';
+  return 'Finance';
+}
 
 const renderResearchTree = (state) => {
   const container = document.getElementById('research-tree-container');
@@ -60,7 +70,10 @@ const renderResearchTree = (state) => {
     researchNodes.add(nodes);
     researchEdges.add(edges);
     
-    const data = { nodes: researchNodes, edges: researchEdges };
+    researchNodesView = new vis.DataView(researchNodes, { filter: item => getNodeCategory(item.id) === currentResearchFilter });
+    researchEdgesView = new vis.DataView(researchEdges, { filter: item => getNodeCategory(item.to) === currentResearchFilter || getNodeCategory(item.from) === currentResearchFilter });
+    
+    const data = { nodes: researchNodesView, edges: researchEdgesView };
     const options = {
       layout: {
         hierarchical: {
@@ -454,7 +467,29 @@ document.getElementById('btn-hard-reset').addEventListener('click', async () => 
 });
 
 document.getElementById('btn-sponsor').addEventListener('click', () => {
-  window.electronAPI.openSponsor();
+  if (window.electronAPI && window.electronAPI.openSponsor) {
+    window.electronAPI.openSponsor();
+  } else {
+    alert("Merci pour votre soutien moral, les étoiles GitHub suffiront !");
+  }
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('primary-btn');
+      b.classList.add('secondary-btn');
+    });
+    e.target.classList.remove('secondary-btn');
+    e.target.classList.add('primary-btn');
+    
+    currentResearchFilter = e.target.dataset.filter;
+    if (researchNodesView && researchEdgesView) {
+      researchNodesView.refresh();
+      researchEdgesView.refresh();
+      if (researchNetwork) researchNetwork.fit();
+    }
+  });
 });
 
 // Init
