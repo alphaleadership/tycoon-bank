@@ -43,7 +43,15 @@ const renderResearchTree = (state) => {
     let nodes = [];
     
     for (const [id, r] of Object.entries(state.researchTree)) {
-      nodes.push({ id: id, label: r.name + '\n' + formatNumber(r.cost) + ' RP', title: r.desc });
+      let icon = '💡';
+      if (id.includes('market') || id.includes('ad') || id.includes('loyalty') || id.includes('gamification') || id.includes('sponsor')) icon = '📣';
+      else if (id.includes('risk') || id.includes('cb_') || id.includes('subprime') || id.includes('bribery') || id.includes('monopoly')) icon = '⚖️';
+      else if (id.includes('online') || id.includes('premium') || id.includes('vip') || id.includes('mobile') || id.includes('eco') || id.includes('greenbonds') || id.includes('blockchain')) icon = '🌐';
+      else if (id.includes('ai') || id.includes('hft') || id.includes('quant') || id.includes('roboadvisor') || id.includes('neural')) icon = '🤖';
+      else if (id.includes('lab') || id.includes('university') || id.includes('quantum') || id.includes('moon') || id.includes('mars') || id.includes('cloning') || id.includes('datamining')) icon = '🧪';
+      else if (id.includes('hr') || id.includes('tax') || id.includes('offshore') || id.includes('retreat')) icon = '💼';
+
+      nodes.push({ id: id, label: icon + ' ' + r.name + '\n' + formatNumber(r.cost) + ' RP', title: r.desc });
       for (const req of r.req) {
         edges.push({ from: req, to: id, arrows: 'to' });
       }
@@ -58,22 +66,33 @@ const renderResearchTree = (state) => {
         hierarchical: {
           direction: 'UD',
           sortMethod: 'directed',
-          nodeSpacing: 180,
-          levelSeparation: 120
+          nodeSpacing: 250,
+          treeSpacing: 300,
+          levelSeparation: 150,
+          blockShifting: true,
+          edgeMinimization: true,
+          parentCentralization: true
         }
       },
       nodes: {
         shape: 'box',
-        margin: 10,
-        font: { color: '#ffffff', face: 'Inter', multi: 'html' },
+        margin: 12,
+        font: { color: '#ffffff', face: 'Inter', multi: 'html', size: 14 },
         borderWidth: 2,
-        shadow: true
+        shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', size: 5, x: 2, y: 2 }
       },
       edges: {
-        color: { color: 'rgba(255,255,255,0.4)' },
-        smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.4 }
+        color: { color: 'rgba(255,255,255,0.2)' },
+        smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 },
+        arrows: { to: { enabled: true, scaleFactor: 0.5 } }
       },
-      physics: false,
+      physics: {
+        enabled: true,
+        hierarchicalRepulsion: {
+          nodeDistance: 200,
+          treeSpacing: 300
+        }
+      },
       interaction: { hover: true, dragNodes: true, zoomView: true, dragView: true }
     };
     researchNetwork = new vis.Network(container, data, options);
