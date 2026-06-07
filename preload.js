@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setRate: (rate) => ipcRenderer.invoke('set-rate', rate),
   unlockResearch: (id) => ipcRenderer.invoke('unlock-research', id),
   unlockAllResearch: () => ipcRenderer.invoke('unlock-all-research'),
+  toggleAutoConsumeRP: () => ipcRenderer.invoke('toggle-auto-consume-rp'),
   buyRP: () => ipcRenderer.invoke('buy-rp'),
   sellRP: () => ipcRenderer.invoke('sell-rp'),
   buyStock: (symbol, amount) => ipcRenderer.invoke('buy-stock', { symbol, amount }),

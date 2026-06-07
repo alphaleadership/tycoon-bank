@@ -299,6 +299,7 @@ let gameState = {
   centralBankRate: 0.03,
   marketingLevel: 1,
   autoLoanEnabled: true,
+  autoConsumeRPEnabled: true,
   unlockedResearches: [],
   researchTree: RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -384,6 +385,7 @@ ipcMain.handle('hard-reset', () => {
     centralBankRate: 0.03,
     marketingLevel: 1,
     autoLoanEnabled: true,
+    autoConsumeRPEnabled: true,
     unlockedResearches: [],
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -559,6 +561,12 @@ ipcMain.handle('toggle-auto-loan', () => {
   if (gameState.autoLoanEnabled === undefined) gameState.autoLoanEnabled = true;
   gameState.autoLoanEnabled = !gameState.autoLoanEnabled;
   return { success: true, message: `Prêts automatiques : ${gameState.autoLoanEnabled ? 'ON' : 'OFF'}`, status: gameState.autoLoanEnabled };
+});
+
+ipcMain.handle('toggle-auto-consume-rp', () => {
+  if (gameState.autoConsumeRPEnabled === undefined) gameState.autoConsumeRPEnabled = true;
+  gameState.autoConsumeRPEnabled = !gameState.autoConsumeRPEnabled;
+  return { success: true, message: `Bonus Scientifique Auto : ${gameState.autoConsumeRPEnabled ? 'ON' : 'OFF'}`, status: gameState.autoConsumeRPEnabled };
 });
 
 ipcMain.handle('set-rate', (event, rate) => {
@@ -1068,7 +1076,7 @@ ipcMain.handle('next-day', () => {
   let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
   let consumedRP = 0;
   
-  if (allDone && gameState.researchPoints > 0) {
+  if (allDone && gameState.researchPoints > 0 && gameState.autoConsumeRPEnabled !== false) {
     let multiplier = Math.log2(1 + gameState.researchPoints) * 0.05; // Échelle logarithmique pour éviter l'explosion
     profitBonus = totalGrossIncome * multiplier;
     gameState.money += profitBonus;

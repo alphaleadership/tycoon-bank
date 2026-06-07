@@ -250,6 +250,19 @@ const updateUI = async () => {
     }
   }
 
+  const btnToggleConsumeRP = document.getElementById('btn-toggle-auto-consume-rp');
+  if (btnToggleConsumeRP) {
+    if (state.autoConsumeRPEnabled !== false) {
+      btnToggleConsumeRP.textContent = "Bonus Scientifique Auto : ON";
+      btnToggleConsumeRP.style.background = "rgba(39, 174, 96, 0.2)";
+      btnToggleConsumeRP.style.borderColor = "rgba(39, 174, 96, 0.5)";
+    } else {
+      btnToggleConsumeRP.textContent = "Bonus Scientifique Auto : OFF";
+      btnToggleConsumeRP.style.background = "rgba(192, 57, 43, 0.2)";
+      btnToggleConsumeRP.style.borderColor = "rgba(192, 57, 43, 0.5)";
+    }
+  }
+
   document.getElementById('val-loans').innerText = formatMoney(state.loansOut);
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
@@ -352,6 +365,12 @@ document.getElementById('btn-buy-rp').addEventListener('click', async () => {
 
 document.getElementById('btn-sell-rp').addEventListener('click', async () => {
   const res = await window.electronAPI.sellRP();
+  addLog(res.message);
+  updateUI();
+});
+
+document.getElementById('btn-toggle-auto-consume-rp').addEventListener('click', async () => {
+  const res = await window.electronAPI.toggleAutoConsumeRP();
   addLog(res.message);
   updateUI();
 });
