@@ -314,6 +314,16 @@ if (document.getElementById('btn-fire-hrmanager')) {
   });
 }
 
+document.getElementById('btn-research-all').addEventListener('click', async () => {
+  const res = await window.electronAPI.unlockAllResearch();
+  if(res.success) {
+    addLog(res.message);
+    updateUI();
+  } else {
+    alert(res.message);
+  }
+});
+
 document.getElementById('btn-hire-researcher').addEventListener('click', async () => {
   const res = await window.electronAPI.actionHireResearcher();
   addLog(res.message);

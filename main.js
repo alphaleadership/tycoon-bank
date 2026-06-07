@@ -609,6 +609,35 @@ ipcMain.handle('unlock-research', (event, id) => {
   return { success: false, message: `Pas assez de points. Total requis : ${formatNumber(totalCost)} RP.` };
 });
 
+ipcMain.handle('unlock-all-research', () => {
+  let unlockedCount = 0;
+  let totalCost = 0;
+  let changed = true;
+
+  while(changed) {
+    changed = false;
+    for (const [id, r] of Object.entries(RESEARCH_TREE)) {
+      if (gameState.unlockedResearches.includes(id)) continue;
+      if (r.repeatable) continue;
+
+      const hasReq = r.req.every(reqId => gameState.unlockedResearches.includes(reqId));
+      if (hasReq && gameState.researchPoints >= r.cost) {
+        gameState.researchPoints -= r.cost;
+        gameState.unlockedResearches.push(id);
+        totalCost += r.cost;
+        unlockedCount++;
+        changed = true;
+      }
+    }
+  }
+  
+  if (unlockedCount > 0) {
+    return { success: true, message: `Vous avez débloqué ${unlockedCount} recherches pour un total de ${formatNumber(totalCost)} RP.` };
+  } else {
+    return { success: false, message: "Aucune recherche abordable ou disponible." };
+  }
+});
+
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
   const stock = gameState.stocks[symbol];
   if(!stock) return { success: false, message: "Action invalide." };
