@@ -654,6 +654,7 @@ ipcMain.handle('unlock-all-research', () => {
   let totalCost = 0;
   let moneySpent = 0;
   let changed = true;
+  let repeatableBoughtThisRun = new Set();
 
   const prioSet = new Set();
   const getAncestors = (id) => {
@@ -675,8 +676,8 @@ ipcMain.handle('unlock-all-research', () => {
   while(changed) {
     changed = false;
     for (const [id, r] of entries) {
-      if (gameState.unlockedResearches.includes(id)) continue;
-      if (r.repeatable) continue;
+      if (gameState.unlockedResearches.includes(id) && !r.repeatable) continue;
+      if (r.repeatable && repeatableBoughtThisRun.has(id)) continue;
 
       const hasReq = r.req.every(reqId => gameState.unlockedResearches.includes(reqId));
       if (hasReq) {
@@ -685,16 +686,25 @@ ipcMain.handle('unlock-all-research', () => {
         let moneyCost = missingRP * 1000;
         
         if (gameState.money >= moneyCost) {
-          if (moneyCost > 0) {
+          if (missingRP > 0) {
             gameState.money -= moneyCost;
             gameState.researchPoints += missingRP;
             moneySpent += moneyCost;
           }
           gameState.researchPoints -= r.cost;
-          gameState.unlockedResearches.push(id);
           totalCost += r.cost;
           unlockedCount++;
           changed = true;
+          
+          if (!r.repeatable) {
+            gameState.unlockedResearches.push(id);
+          } else {
+            repeatableBoughtThisRun.add(id);
+            if (id === 'r_hike_cb') {
+              gameState.centralBankRate += 0.005; // +0.5%
+              if (gameState.centralBankRate > 0.15) gameState.centralBankRate = 0.15;
+            }
+          }
         }
       }
     }

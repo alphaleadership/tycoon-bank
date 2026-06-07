@@ -280,7 +280,9 @@ const updateUI = async () => {
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
   
-  const allDone = Object.keys(state.researchTree).every(k => state.unlockedResearches.includes(k));
+  const allDone = Object.keys(state.researchTree)
+    .filter(k => !state.researchTree[k].repeatable)
+    .every(k => state.unlockedResearches.includes(k));
   if (allDone && document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'block';
     document.getElementById('lvl-mega-marketing').textContent = state.megaMarketing || 0;
