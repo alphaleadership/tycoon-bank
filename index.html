@@ -31,6 +31,7 @@
       <button class="tab-btn" data-tab="tab-rh">RH & Opérations</button>
       <button class="tab-btn" data-tab="tab-research">Laboratoire</button>
       <button class="tab-btn" data-tab="tab-market">Bourse</button>
+      <button class="tab-btn" data-tab="tab-personnel">Personnel</button>
       <button class="tab-btn" data-tab="tab-settings">Paramètres</button>
     </nav>
     
@@ -164,6 +165,35 @@
           </div>
           <div class="stock-list" id="stock-list-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
             <!-- Stocks injected here via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB : PERSONNEL -->
+      <div id="tab-personnel" class="tab-content" style="display: none;">
+        <div class="card stats-card glass" style="margin-bottom: 1.5rem;">
+          <h2>Effectifs par Catégorie</h2>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="stat-label">Service Client (Employés)</span>
+              <span class="stat-value" id="val-perso-cs">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Traders</span>
+              <span class="stat-value" id="val-perso-traders">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Marketeurs</span>
+              <span class="stat-value" id="val-perso-marketers">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Chercheurs</span>
+              <span class="stat-value" id="val-perso-researchers">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Directeurs RH</span>
+              <span class="stat-value" id="val-perso-hrmanagers">0</span>
+            </div>
           </div>
         </div>
       </div>

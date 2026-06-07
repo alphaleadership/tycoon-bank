@@ -146,6 +146,14 @@ const updateUI = async () => {
     document.getElementById('btn-fire-hrmanager').disabled = (state.hrManagers || 0) === 0;
   }
   
+  if (document.getElementById('val-perso-cs')) {
+    document.getElementById('val-perso-cs').textContent = formatNumber(state.employees);
+    document.getElementById('val-perso-traders').textContent = formatNumber(state.traders);
+    document.getElementById('val-perso-marketers').textContent = formatNumber(state.marketers);
+    document.getElementById('val-perso-researchers').textContent = formatNumber(state.researchers);
+    document.getElementById('val-perso-hrmanagers').textContent = formatNumber(state.hrManagers || 0);
+  }
+  
   renderResearchTree(state);
   renderStockMarket(state);
 };
