@@ -217,6 +217,12 @@ window.sellStock = async (symbol, amount) => {
 
 const updateUI = async () => {
   const state = await window.electronAPI.getState();
+  if (!state) return;
+  
+  if (state.appVersion && document.getElementById('app-version')) {
+    document.getElementById('app-version').innerText = 'v' + state.appVersion;
+  }
+
   document.getElementById('val-day').textContent = state.day;
   document.getElementById('val-money').textContent = formatMoney(state.money);
   document.getElementById('val-clients').textContent = formatNumber(state.clients);

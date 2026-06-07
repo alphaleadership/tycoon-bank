@@ -349,7 +349,9 @@ app.on('window-all-closed', function () {
 });
 
 // IPC Handlers
-ipcMain.handle('get-state', () => gameState);
+ipcMain.handle('get-state', () => {
+  return { ...gameState, appVersion: app.getVersion() };
+});
 
 ipcMain.handle('check-update', async () => {
   try {
