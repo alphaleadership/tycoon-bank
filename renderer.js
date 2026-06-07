@@ -106,10 +106,30 @@ const renderResearchTree = (state) => {
   }
   
   const updates = [];
+  
+  const getMissingCost = (nodeId) => {
+    const missing = new Set();
+    const findMissing = (nId) => {
+      const node = state.researchTree[nId];
+      if (!node) return;
+      for (const req of node.req) {
+        if (!state.unlockedResearches.includes(req) && !missing.has(req)) {
+          findMissing(req);
+          missing.add(req);
+        }
+      }
+    };
+    findMissing(nodeId);
+    let total = state.researchTree[nodeId].cost;
+    for (const m of missing) total += state.researchTree[m].cost;
+    return { total, count: missing.size };
+  };
+
   for (const [id, r] of Object.entries(state.researchTree)) {
     const isUnlocked = state.unlockedResearches.includes(id) && !r.repeatable;
     const hasReq = r.req.every(reqId => state.unlockedResearches.includes(reqId));
-    const canAfford = state.researchPoints >= r.cost;
+    const missingInfo = getMissingCost(id);
+    const canAffordAll = state.researchPoints >= missingInfo.total;
     
     let background = '#2c3e50';
     let border = '#34495e';
@@ -118,15 +138,18 @@ const renderResearchTree = (state) => {
     if (isUnlocked) {
       background = '#27ae60'; border = '#2ecc71';
       titleStr += 'Débloqué';
-    } else if (hasReq && canAfford) {
+    } else if (hasReq && state.researchPoints >= r.cost) {
       background = '#2980b9'; border = '#3498db';
       titleStr += 'Disponible (Double-cliquez pour rechercher)';
     } else if (hasReq) {
       background = '#8e44ad'; border = '#9b59b6';
-      titleStr += 'Fonds insuffisants (' + formatNumber(r.cost) + ' RP)';
+      titleStr += `Fonds insuffisants (${formatNumber(r.cost)} RP)`;
+    } else if (!hasReq && canAffordAll) {
+      background = '#d35400'; border = '#e67e22'; // Orange pour l'achat récursif
+      titleStr += `Déblocage groupé disponible (${missingInfo.count} prérequis, Total: ${formatNumber(missingInfo.total)} RP)`;
     } else {
       background = '#7f8c8d'; border = '#95a5a6';
-      titleStr += 'Verrouillé (Prérequis manquants)';
+      titleStr += `Verrouillé (Il vous faut ${formatNumber(missingInfo.total)} RP au total)`;
     }
     
     updates.push({ id: id, color: { background: background, border: border }, title: titleStr });

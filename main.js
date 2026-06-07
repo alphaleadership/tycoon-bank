@@ -561,24 +561,50 @@ ipcMain.handle('unlock-research', (event, id) => {
   const r = RESEARCH_TREE[id];
   if(!r) return { success: false, message: "Recherche introuvable." };
   if(gameState.unlockedResearches.includes(id) && !r.repeatable) return { success: false, message: "Déjà débloqué." };
-  if(gameState.researchPoints >= r.cost) {
-    const hasReq = r.req.every(reqId => gameState.unlockedResearches.includes(reqId));
-    if(hasReq) {
-      gameState.researchPoints -= r.cost;
-      if (!r.repeatable) {
-        gameState.unlockedResearches.push(id);
-      } else {
-        if (id === 'r_hike_cb') {
-          gameState.centralBankRate += 0.005; // +0.5%
-          if (gameState.centralBankRate > 0.15) gameState.centralBankRate = 0.15;
-        }
+  
+  // Find all missing requirements recursively
+  const missing = new Set();
+  const getMissing = (nodeId) => {
+    const node = RESEARCH_TREE[nodeId];
+    if (!node) return;
+    for (const req of node.req) {
+      if (!gameState.unlockedResearches.includes(req) && !missing.has(req)) {
+        getMissing(req);
+        missing.add(req);
       }
-      return { success: true, message: `Recherche appliquée: ${r.name}` };
-    } else {
-      return { success: false, message: "Prérequis manquants." };
     }
+  };
+  getMissing(id);
+  
+  let totalCost = r.cost;
+  for (const mId of missing) {
+    totalCost += RESEARCH_TREE[mId].cost;
   }
-  return { success: false, message: "Pas assez de points." };
+
+  if(gameState.researchPoints >= totalCost) {
+    gameState.researchPoints -= totalCost;
+    
+    // Unlock all missing
+    for (const mId of missing) {
+      gameState.unlockedResearches.push(mId);
+    }
+    
+    // Unlock target
+    if (!r.repeatable) {
+      gameState.unlockedResearches.push(id);
+    } else {
+      if (id === 'r_hike_cb') {
+        gameState.centralBankRate += 0.005; // +0.5%
+        if (gameState.centralBankRate > 0.15) gameState.centralBankRate = 0.15;
+      }
+    }
+    
+    if (missing.size > 0) {
+      return { success: true, message: `Recherche appliquée: ${r.name} (et ${missing.size} prérequis pour ${formatNumber(totalCost)} RP)` };
+    }
+    return { success: true, message: `Recherche appliquée: ${r.name}` };
+  }
+  return { success: false, message: `Pas assez de points. Total requis : ${formatNumber(totalCost)} RP.` };
 });
 
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
