@@ -6,6 +6,7 @@
   <title>Tycoon Bancaire</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="node_modules/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -143,7 +144,8 @@
             <button id="btn-fire-researcher" class="btn btn-sell" style="flex: 1; padding: 0.5rem; font-size: 0.9rem;">Licencier</button>
           </div>
           
-          <div class="research-tree" id="research-tree-container">
+          <div id="endgame-msg-container"></div>
+          <div class="research-tree" id="research-tree-container" style="height: 600px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.2);">
             <!-- Research items injected here via JS -->
           </div>
         </div>

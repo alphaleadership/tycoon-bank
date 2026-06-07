@@ -17,49 +17,102 @@ const formatMoney = (val) => {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(val);
 };
 
+let researchNetwork = null;
+let researchNodes = null;
+let researchEdges = null;
+
 const renderResearchTree = (state) => {
   const container = document.getElementById('research-tree-container');
-  container.innerHTML = '';
+  const msgContainer = document.getElementById('endgame-msg-container');
   
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
     .every(k => state.unlockedResearches.includes(k));
 
   if (allDone) {
-    const endMsg = document.createElement('div');
-    endMsg.innerHTML = '<b style="color:var(--primary-color);">🌟 Arbre Technologique Complété !</b><br/><span style="font-size:0.85em;">Mode Endgame activé : Les jours passent automatiquement toutes les 10 secondes. Vos Points de Recherche optimisent votre rentabilité (+0.1% / point).</span>';
-    endMsg.style.padding = "1rem";
-    endMsg.style.textAlign = "center";
-    endMsg.style.background = "rgba(100, 255, 150, 0.1)";
-    endMsg.style.borderRadius = "8px";
-    endMsg.style.marginBottom = "1rem";
-    container.appendChild(endMsg);
+    if (msgContainer) msgContainer.innerHTML = '<div style="padding:1rem; text-align:center; background:rgba(100,255,150,0.1); border-radius:8px; margin-bottom:1rem;"><b style="color:var(--primary-color);">🌟 Arbre Technologique Complété !</b><br/><span style="font-size:0.85em;">Mode Endgame activé : Les jours passent automatiquement toutes les 10 secondes. Vos RP optimisent votre rentabilité (+0.1% / point).</span></div>';
+  } else {
+    if (msgContainer) msgContainer.innerHTML = '';
   }
 
+  if (!researchNetwork) {
+    researchNodes = new vis.DataSet();
+    researchEdges = new vis.DataSet();
+    
+    let edges = [];
+    let nodes = [];
+    
+    for (const [id, r] of Object.entries(state.researchTree)) {
+      nodes.push({ id: id, label: r.name + '\n' + formatNumber(r.cost) + ' RP', title: r.desc });
+      for (const req of r.req) {
+        edges.push({ from: req, to: id, arrows: 'to' });
+      }
+    }
+    
+    researchNodes.add(nodes);
+    researchEdges.add(edges);
+    
+    const data = { nodes: researchNodes, edges: researchEdges };
+    const options = {
+      layout: {
+        hierarchical: {
+          direction: 'UD',
+          sortMethod: 'directed',
+          nodeSpacing: 180,
+          levelSeparation: 120
+        }
+      },
+      nodes: {
+        shape: 'box',
+        margin: 10,
+        font: { color: '#ffffff', face: 'Inter', multi: 'html' },
+        borderWidth: 2,
+        shadow: true
+      },
+      edges: {
+        color: { color: 'rgba(255,255,255,0.4)' },
+        smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.4 }
+      },
+      physics: false,
+      interaction: { hover: true, dragNodes: true, zoomView: true, dragView: true }
+    };
+    researchNetwork = new vis.Network(container, data, options);
+    
+    researchNetwork.on('doubleClick', async function (params) {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        window.doResearch(nodeId);
+      }
+    });
+  }
+  
+  const updates = [];
   for (const [id, r] of Object.entries(state.researchTree)) {
     const isUnlocked = state.unlockedResearches.includes(id) && !r.repeatable;
     const hasReq = r.req.every(reqId => state.unlockedResearches.includes(reqId));
+    const canAfford = state.researchPoints >= r.cost;
     
-    const div = document.createElement('div');
-    div.className = `research-item ${isUnlocked ? 'unlocked' : (hasReq ? 'available' : 'locked')}`;
+    let background = '#2c3e50';
+    let border = '#34495e';
+    let titleStr = r.desc + '\nStatus: ';
     
-    let btnHtml = '';
-    if(isUnlocked) {
-      btnHtml = `<span style="color:var(--success); font-size:0.8rem;">Débloqué</span>`;
+    if (isUnlocked) {
+      background = '#27ae60'; border = '#2ecc71';
+      titleStr += 'Débloqué';
+    } else if (hasReq && canAfford) {
+      background = '#2980b9'; border = '#3498db';
+      titleStr += 'Disponible (Double-cliquez pour rechercher)';
+    } else if (hasReq) {
+      background = '#8e44ad'; border = '#9b59b6';
+      titleStr += 'Fonds insuffisants (' + formatNumber(r.cost) + ' RP)';
     } else {
-      const canAfford = state.researchPoints >= r.cost;
-      btnHtml = `<button class="btn secondary-btn research-btn" ${(!hasReq || !canAfford) ? 'disabled' : ''} onclick="window.doResearch('${id}')">Rechercher (${formatNumber(r.cost)} RP)</button>`;
+      background = '#7f8c8d'; border = '#95a5a6';
+      titleStr += 'Verrouillé (Prérequis manquants)';
     }
-
-    div.innerHTML = `
-      <div class="research-header">
-        <span>${r.name}</span>
-        ${btnHtml}
-      </div>
-      <div class="research-desc">${r.desc}</div>
-    `;
-    container.appendChild(div);
+    
+    updates.push({ id: id, color: { background: background, border: border }, title: titleStr });
   }
+  researchNodes.update(updates);
 };
 
 const renderStockMarket = (state) => {
