@@ -644,9 +644,26 @@ ipcMain.handle('unlock-all-research', () => {
   let moneySpent = 0;
   let changed = true;
 
+  const prioSet = new Set();
+  const getAncestors = (id) => {
+    if (!RESEARCH_TREE[id]) return;
+    prioSet.add(id);
+    if (RESEARCH_TREE[id].req) {
+      for (const req of RESEARCH_TREE[id].req) getAncestors(req);
+    }
+  };
+  getAncestors('r_hr');
+  getAncestors('r_auto_rate');
+
+  const entries = Object.entries(RESEARCH_TREE).sort((a, b) => {
+    const aPrio = prioSet.has(a[0]) ? 0 : 1;
+    const bPrio = prioSet.has(b[0]) ? 0 : 1;
+    return aPrio - bPrio;
+  });
+
   while(changed) {
     changed = false;
-    for (const [id, r] of Object.entries(RESEARCH_TREE)) {
+    for (const [id, r] of entries) {
       if (gameState.unlockedResearches.includes(id)) continue;
       if (r.repeatable) continue;
 
