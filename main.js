@@ -298,6 +298,7 @@ let gameState = {
   interestRate: 0.05,
   centralBankRate: 0.03,
   marketingLevel: 1,
+  autoLoanEnabled: true,
   unlockedResearches: [],
   researchTree: RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -382,6 +383,7 @@ ipcMain.handle('hard-reset', () => {
     interestRate: 0.05,
     centralBankRate: 0.03,
     marketingLevel: 1,
+    autoLoanEnabled: true,
     unlockedResearches: [],
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -910,7 +912,7 @@ ipcMain.handle('next-day', () => {
   }
 
   // Distribution automatique de prêts par les employés
-  if (gameState.employees > 0 && gameState.money > 0) {
+  if (gameState.employees > 0 && gameState.money > 0 && gameState.autoLoanEnabled !== false) {
     let maxLoanMultiplier = 5000;
     if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
     else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;

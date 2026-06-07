@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   actionHireHrManager: () => ipcRenderer.invoke('action-hire-hrmanager'),
   actionFireHrManager: () => ipcRenderer.invoke('action-fire-hrmanager'),
   actionLoan: () => ipcRenderer.invoke('action-loan'),
+  toggleAutoLoan: () => ipcRenderer.invoke('toggle-auto-loan'),
   setRate: (rate) => ipcRenderer.invoke('set-rate', rate),
   unlockResearch: (id) => ipcRenderer.invoke('unlock-research', id),
   unlockAllResearch: () => ipcRenderer.invoke('unlock-all-research'),

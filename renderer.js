@@ -237,6 +237,20 @@ const updateUI = async () => {
   if (document.getElementById('val-hrmanagers')) {
     document.getElementById('val-hrmanagers').textContent = formatNumber(state.hrManagers || 0);
   }
+  
+  const btnToggleLoan = document.getElementById('btn-toggle-auto-loan');
+  if (btnToggleLoan) {
+    if (state.autoLoanEnabled !== false) {
+      btnToggleLoan.textContent = "Prêts Automatiques : ON";
+      btnToggleLoan.style.background = "rgba(39, 174, 96, 0.2)";
+      btnToggleLoan.style.borderColor = "rgba(39, 174, 96, 0.5)";
+    } else {
+      btnToggleLoan.textContent = "Prêts Automatiques : OFF";
+      btnToggleLoan.style.background = "rgba(192, 57, 43, 0.2)";
+      btnToggleLoan.style.borderColor = "rgba(192, 57, 43, 0.5)";
+    }
+  }
+
   document.getElementById('val-loans').innerText = formatMoney(state.loansOut);
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
@@ -375,6 +389,12 @@ document.getElementById('btn-fire-marketer').addEventListener('click', async () 
 
 document.getElementById('btn-loan').addEventListener('click', async () => {
   const res = await window.electronAPI.actionLoan();
+  addLog(res.message);
+  updateUI();
+});
+
+document.getElementById('btn-toggle-auto-loan').addEventListener('click', async () => {
+  const res = await window.electronAPI.toggleAutoLoan();
   addLog(res.message);
   updateUI();
 });
