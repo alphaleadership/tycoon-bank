@@ -129,7 +129,12 @@ const renderResearchTree = (state) => {
     const isUnlocked = state.unlockedResearches.includes(id) && !r.repeatable;
     const hasReq = r.req.every(reqId => state.unlockedResearches.includes(reqId));
     const missingInfo = getMissingCost(id);
-    const canAffordAll = state.researchPoints >= missingInfo.total;
+    
+    // 1000 € = 1 RP
+    const equivalentRPFromMoney = Math.floor(state.money / 1000);
+    const totalAvailableRP = state.researchPoints + equivalentRPFromMoney;
+    const canAffordAll = totalAvailableRP >= missingInfo.total;
+    const canAffordSingle = totalAvailableRP >= r.cost;
     
     let background = '#2c3e50';
     let border = '#34495e';
@@ -138,15 +143,17 @@ const renderResearchTree = (state) => {
     if (isUnlocked) {
       background = '#27ae60'; border = '#2ecc71';
       titleStr += 'Débloqué';
-    } else if (hasReq && state.researchPoints >= r.cost) {
+    } else if (hasReq && canAffordSingle) {
       background = '#2980b9'; border = '#3498db';
       titleStr += 'Disponible (Double-cliquez pour rechercher)';
+      if (state.researchPoints < r.cost) titleStr += `\n(Achètera les RP manquants pour ${formatNumber((r.cost - state.researchPoints) * 1000)} €)`;
     } else if (hasReq) {
       background = '#8e44ad'; border = '#9b59b6';
       titleStr += `Fonds insuffisants (${formatNumber(r.cost)} RP)`;
     } else if (!hasReq && canAffordAll) {
       background = '#d35400'; border = '#e67e22'; // Orange pour l'achat récursif
       titleStr += `Déblocage groupé disponible (${missingInfo.count} prérequis, Total: ${formatNumber(missingInfo.total)} RP)`;
+      if (state.researchPoints < missingInfo.total) titleStr += `\n(Achètera les RP manquants pour ${formatNumber((missingInfo.total - state.researchPoints) * 1000)} €)`;
     } else {
       background = '#7f8c8d'; border = '#95a5a6';
       titleStr += `Verrouillé (Il vous faut ${formatNumber(missingInfo.total)} RP au total)`;
@@ -322,6 +329,12 @@ document.getElementById('btn-research-all').addEventListener('click', async () =
   } else {
     alert(res.message);
   }
+});
+
+document.getElementById('btn-buy-rp').addEventListener('click', async () => {
+  const res = await window.electronAPI.buyRP();
+  addLog(res.message);
+  updateUI();
 });
 
 document.getElementById('btn-hire-researcher').addEventListener('click', async () => {

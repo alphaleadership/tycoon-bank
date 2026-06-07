@@ -586,7 +586,16 @@ ipcMain.handle('unlock-research', (event, id) => {
     totalCost += RESEARCH_TREE[mId].cost;
   }
 
-  if(gameState.researchPoints >= totalCost) {
+  let missingRP = totalCost - gameState.researchPoints;
+  if (missingRP < 0) missingRP = 0;
+  let moneyCost = missingRP * 1000;
+
+  if (gameState.money >= moneyCost) {
+    if (moneyCost > 0) {
+      gameState.money -= moneyCost;
+      gameState.researchPoints += missingRP;
+    }
+    
     gameState.researchPoints -= totalCost;
     
     // Unlock all missing
@@ -604,17 +613,19 @@ ipcMain.handle('unlock-research', (event, id) => {
       }
     }
     
+    let msgSuffix = moneyCost > 0 ? ` (et ${formatNumber(moneyCost)} € dépensés pour les RP manquants)` : '';
     if (missing.size > 0) {
-      return { success: true, message: `Recherche appliquée: ${r.name} (et ${missing.size} prérequis pour ${formatNumber(totalCost)} RP)` };
+      return { success: true, message: `Recherche appliquée: ${r.name} (et ${missing.size} prérequis)${msgSuffix}` };
     }
-    return { success: true, message: `Recherche appliquée: ${r.name}` };
+    return { success: true, message: `Recherche appliquée: ${r.name}${msgSuffix}` };
   }
-  return { success: false, message: `Pas assez de points. Total requis : ${formatNumber(totalCost)} RP.` };
+  return { success: false, message: `Pas assez de fonds. Il vous faut ${formatNumber(moneyCost)} € pour compenser les RP manquants.` };
 });
 
 ipcMain.handle('unlock-all-research', () => {
   let unlockedCount = 0;
   let totalCost = 0;
+  let moneySpent = 0;
   let changed = true;
 
   while(changed) {
@@ -624,21 +635,43 @@ ipcMain.handle('unlock-all-research', () => {
       if (r.repeatable) continue;
 
       const hasReq = r.req.every(reqId => gameState.unlockedResearches.includes(reqId));
-      if (hasReq && gameState.researchPoints >= r.cost) {
-        gameState.researchPoints -= r.cost;
-        gameState.unlockedResearches.push(id);
-        totalCost += r.cost;
-        unlockedCount++;
-        changed = true;
+      if (hasReq) {
+        let missingRP = r.cost - gameState.researchPoints;
+        if (missingRP < 0) missingRP = 0;
+        let moneyCost = missingRP * 1000;
+        
+        if (gameState.money >= moneyCost) {
+          if (moneyCost > 0) {
+            gameState.money -= moneyCost;
+            gameState.researchPoints += missingRP;
+            moneySpent += moneyCost;
+          }
+          gameState.researchPoints -= r.cost;
+          gameState.unlockedResearches.push(id);
+          totalCost += r.cost;
+          unlockedCount++;
+          changed = true;
+        }
       }
     }
   }
   
   if (unlockedCount > 0) {
-    return { success: true, message: `Vous avez débloqué ${unlockedCount} recherches pour un total de ${formatNumber(totalCost)} RP.` };
+    let msg = `Vous avez débloqué ${unlockedCount} recherches pour ${formatNumber(totalCost)} RP.`;
+    if (moneySpent > 0) msg += ` (${formatNumber(moneySpent)} € utilisés).`;
+    return { success: true, message: msg };
   } else {
     return { success: false, message: "Aucune recherche abordable ou disponible." };
   }
+});
+
+ipcMain.handle('buy-rp', () => {
+  if (gameState.money >= 100000) {
+    gameState.money -= 100000;
+    gameState.researchPoints += 100;
+    return { success: true, message: "Achat de 100 RP réussi (-100k €)." };
+  }
+  return { success: false, message: "Fonds insuffisants pour acheter des RP (100k € requis)." };
 });
 
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
