@@ -300,6 +300,8 @@ let gameState = {
   marketingLevel: 1,
   autoLoanEnabled: true,
   autoConsumeRPEnabled: true,
+  megaMarketing: 0,
+  megaLobbying: 0,
   unlockedResearches: [],
   researchTree: RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -386,6 +388,8 @@ ipcMain.handle('hard-reset', () => {
     marketingLevel: 1,
     autoLoanEnabled: true,
     autoConsumeRPEnabled: true,
+    megaMarketing: 0,
+    megaLobbying: 0,
     unlockedResearches: [],
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
@@ -571,9 +575,16 @@ ipcMain.handle('toggle-auto-consume-rp', () => {
 
 ipcMain.handle('set-rate', (event, rate) => {
   const r = parseFloat(rate);
+  let maxRate = 0.15;
+  if (gameState.megaLobbying > 0) maxRate += gameState.megaLobbying * 0.05;
+  
   if (!isNaN(r) && r >= 0) {
-    gameState.interestRate = r / 100;
-    return { success: true, message: `Taux mis à jour à ${r}%.` };
+    if (r / 100 <= maxRate) {
+      gameState.interestRate = r / 100;
+      return { success: true, message: `Taux mis à jour à ${r}%.` };
+    } else {
+      return { success: false, message: `Le taux est trop élevé ! L'autorité des marchés bloque à ${(maxRate*100).toFixed(0)}%.` };
+    }
   }
   return { success: false, message: "Taux invalide." };
 });
@@ -725,6 +736,39 @@ ipcMain.handle('sell-all-rp', () => {
     return { success: true, message: `Vente de ${formatNumber(rpToSell)} RP réussie (+${formatMoney(earned)}).` };
   }
   return { success: false, message: "Vous n'avez aucun RP à vendre." };
+});
+
+ipcMain.handle('buy-max-rp', () => {
+  if (gameState.money >= 1000) {
+    let chunks = Math.floor(gameState.money / 1000);
+    gameState.money -= chunks * 1000;
+    gameState.researchPoints += chunks;
+    return { success: true, message: `Achat massif réussi : +${formatNumber(chunks)} RP !` };
+  }
+  return { success: false, message: "Fonds insuffisants pour acheter ne serait-ce qu'un RP (1 000 € requis)." };
+});
+
+ipcMain.handle('buy-mega-marketing', () => {
+  if (!gameState.megaMarketing) gameState.megaMarketing = 0;
+  let cost = 100000000000 * Math.pow(10, gameState.megaMarketing); // 100 Billions * 10^lvl
+  if (gameState.money >= cost) {
+    gameState.money -= cost;
+    gameState.clients += 1000000;
+    gameState.megaMarketing++;
+    return { success: true, message: `Campagne Galactique Lancée ! Vous avez touché 1 Million de nouveaux clients (-${formatMoney(cost)}).` };
+  }
+  return { success: false, message: `Fonds insuffisants. Il vous faut ${formatMoney(cost)}.` };
+});
+
+ipcMain.handle('buy-mega-lobbying', () => {
+  if (!gameState.megaLobbying) gameState.megaLobbying = 0;
+  let cost = 10000000000000 * Math.pow(10, gameState.megaLobbying); // 10 Trillions * 10^lvl
+  if (gameState.money >= cost) {
+    gameState.money -= cost;
+    gameState.megaLobbying++;
+    return { success: true, message: `Lobbying Stellaire Réussi ! Taux maximum augmenté de 5% (-${formatMoney(cost)}).` };
+  }
+  return { success: false, message: `Fonds insuffisants. Il vous faut ${formatMoney(cost)}.` };
 });
 
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {

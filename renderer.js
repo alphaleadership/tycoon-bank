@@ -279,6 +279,15 @@ const updateUI = async () => {
   document.getElementById('val-loans').innerText = formatMoney(state.loansOut);
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
+  
+  const allDone = Object.keys(state.researchTree).every(k => state.unlockedResearches.includes(k));
+  if (allDone && document.getElementById('endgame-upgrades')) {
+    document.getElementById('endgame-upgrades').style.display = 'block';
+    document.getElementById('lvl-mega-marketing').textContent = state.megaMarketing || 0;
+    document.getElementById('lvl-mega-lobbying').textContent = state.megaLobbying || 0;
+  } else if (document.getElementById('endgame-upgrades')) {
+    document.getElementById('endgame-upgrades').style.display = 'none';
+  }
   document.getElementById('val-marketing').innerText = `Niv ${state.marketingLevel} / ${formatNumber(state.marketers)} Emp`;
   
   document.getElementById('val-rp').textContent = formatNumber(state.researchPoints);
@@ -387,6 +396,24 @@ document.getElementById('btn-sell-all-rp').addEventListener('click', async () =>
   addLog(res.message);
   updateUI();
 });
+
+if (document.getElementById('btn-mega-buy-max-rp')) {
+  document.getElementById('btn-mega-buy-max-rp').addEventListener('click', async () => {
+    const res = await window.electronAPI.buyMaxRP();
+    addLog(res.message);
+    updateUI();
+  });
+  document.getElementById('btn-mega-marketing').addEventListener('click', async () => {
+    const res = await window.electronAPI.buyMegaMarketing();
+    addLog(res.message);
+    updateUI();
+  });
+  document.getElementById('btn-mega-lobbying').addEventListener('click', async () => {
+    const res = await window.electronAPI.buyMegaLobbying();
+    addLog(res.message);
+    updateUI();
+  });
+}
 
 document.getElementById('btn-toggle-auto-consume-rp').addEventListener('click', async () => {
   const res = await window.electronAPI.toggleAutoConsumeRP();
