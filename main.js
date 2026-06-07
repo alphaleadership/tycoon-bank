@@ -87,6 +87,9 @@ const RESEARCH_TREE = {
   , 'r_moon': { id: 'r_moon', name: 'Succursale Lunaire', cost: 2000, desc: 'Frais +10€, Prestige interplanétaire', req: ['r_quantum'] }
   , 'r_cloning': { id: 'r_cloning', name: 'Clonage d\'Employés', cost: 1500, desc: 'Les employés gèrent 100 clients', req: ['r_hr', 'r_lab_equip'] }
   , 'r_mindcontrol': { id: 'r_mindcontrol', name: 'Contrôle Mental', cost: 2500, desc: 'Les clients acceptent n\'importe quel taux', req: ['r_neuromarketing', 'r_monopoly'] }
+  , 'r_hr_ai': { id: 'r_hr_ai', name: 'Tri IA des CVs', cost: 800, desc: 'Les employés gèrent 20% de clients en plus', req: ['r_hr', 'r_ai'] }
+  , 'r_event_forecast': { id: 'r_event_forecast', name: 'Prévision d\'Événements', cost: 1200, desc: 'Augmente la probabilité d\'événements positifs', req: ['r_datamining'] }
+  , 'r_corporate_retreat': { id: 'r_corporate_retreat', name: 'Séminaires d\'Entreprise', cost: 2000, desc: 'Divise par deux le taux de fuite des clients en cas d\'événement négatif', req: ['r_loyalty'] }
 };
 
 
@@ -109,6 +112,33 @@ const STOCKS = {
 };
 
 const RANDOM_EVENTS = [
+  {
+    name: "Influenceur Viral",
+    effect: (state) => {
+      let gained = Math.floor(state.clients * 0.15) + 20;
+      state.clients += gained;
+      return `📱 Événement : Un influenceur a parlé de vous ! +${gained} clients massifs.`;
+    }
+  },
+  {
+    name: "Contrôle Fiscal",
+    effect: (state) => {
+      if (state.unlockedResearches.includes('r_tax_evasion')) {
+        let fine = Math.floor(state.money * 0.1) + 20000;
+        state.money -= fine;
+        return `🚨 Événement : Le fisc vous redresse suite à votre optimisation... Amende de ${formatMoney(fine)}.`;
+      }
+      return "";
+    }
+  },
+  {
+    name: "Krach Localisé",
+    condition: (state) => Object.values(state.portfolio).some(v => v > 0),
+    effect: (state) => {
+      for (let s in state.stocks) state.stocks[s].price *= 0.85;
+      return `📉 Événement : Panique sur les marchés ! Les actions chutent de 15%.`;
+    }
+  },
   {
     name: "Don de généreux investisseurs",
     effect: (state) => {
@@ -250,6 +280,7 @@ let gameState = {
   money: 100000,
   clients: 10,
   employees: 2,
+  hrManagers: 0,
   researchers: 0,
   traders: 0,
   marketers: 0,
@@ -379,6 +410,23 @@ ipcMain.handle('action-marketing', () => {
 ipcMain.handle('action-hire', () => {
   gameState.employees++;
   return { success: true, message: "Nouvel employé embauché !" };
+});
+
+ipcMain.handle('action-hire-hrmanager', () => {
+  if (gameState.money >= 1000) {
+    gameState.money -= 1000;
+    gameState.hrManagers = (gameState.hrManagers || 0) + 1;
+    return { success: true, message: "Directeur RH recruté !" };
+  }
+  return { success: false, message: "Fonds insuffisants (1000 €)." };
+});
+
+ipcMain.handle('action-fire-hrmanager', () => {
+  if (gameState.hrManagers && gameState.hrManagers > 0) {
+    gameState.hrManagers--;
+    return { success: true, message: "Directeur RH licencié." };
+  }
+  return { success: false, message: "Aucun directeur RH à licencier." };
 });
 
 ipcMain.handle('action-hire-researcher', () => {
@@ -552,7 +600,7 @@ ipcMain.handle('next-day', () => {
   gameState.day++;
   
   // Salaires
-  let baseSalaries = (gameState.employees * 100) + (gameState.researchers * (gameState.unlockedResearches.includes('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
+  let baseSalaries = (gameState.employees * 100) + ((gameState.hrManagers || 0) * 500) + (gameState.researchers * (gameState.unlockedResearches.includes('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
   let salaries = baseSalaries;
   if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries *= 0.8;
   if (gameState.unlockedResearches.includes('r_offshore')) salaries *= 0.9;
@@ -627,6 +675,8 @@ ipcMain.handle('next-day', () => {
   // Gestion de la charge de travail et RH
   let employeeEfficiency = gameState.unlockedResearches.includes('r_hr') ? 50 : 30;
   if (gameState.unlockedResearches.includes('r_cloning')) employeeEfficiency = 100;
+  if (gameState.unlockedResearches.includes('r_hr_ai')) employeeEfficiency = Math.floor(employeeEfficiency * 1.2);
+  employeeEfficiency += (gameState.hrManagers || 0) * 50;
   
   // Auto-recrutement et licenciement si RH débloqué
   if (gameState.unlockedResearches.includes('r_online')) {

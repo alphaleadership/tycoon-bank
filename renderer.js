@@ -126,6 +126,9 @@ const updateUI = async () => {
   document.getElementById('val-money').textContent = formatMoney(state.money);
   document.getElementById('val-clients').textContent = formatNumber(state.clients);
   document.getElementById('val-employees').textContent = formatNumber(state.employees);
+  if (document.getElementById('val-hrmanagers')) {
+    document.getElementById('val-hrmanagers').textContent = formatNumber(state.hrManagers || 0);
+  }
   document.getElementById('val-loans').innerText = formatMoney(state.loansOut);
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
@@ -139,6 +142,9 @@ const updateUI = async () => {
   document.getElementById('btn-fire-trader').disabled = state.traders === 0;
   
   document.getElementById('btn-fire-marketer').disabled = state.marketers === 0;
+  if (document.getElementById('btn-fire-hrmanager')) {
+    document.getElementById('btn-fire-hrmanager').disabled = (state.hrManagers || 0) === 0;
+  }
   
   renderResearchTree(state);
   renderStockMarket(state);
@@ -178,9 +184,25 @@ document.getElementById('btn-load').addEventListener('click', async () => {
 
 document.getElementById('btn-hire').addEventListener('click', async () => {
   const res = await window.electronAPI.actionHire();
-  addLog(res.message);
-  updateUI();
+  if(res.success) { addLog(res.message); updateUI(); }
+  else { alert(res.message); }
 });
+
+if (document.getElementById('btn-hire-hrmanager')) {
+  document.getElementById('btn-hire-hrmanager').addEventListener('click', async () => {
+    const res = await window.electronAPI.actionHireHrManager();
+    if(res.success) { addLog(res.message); updateUI(); }
+    else { alert(res.message); }
+  });
+}
+
+if (document.getElementById('btn-fire-hrmanager')) {
+  document.getElementById('btn-fire-hrmanager').addEventListener('click', async () => {
+    const res = await window.electronAPI.actionFireHrManager();
+    if(res.success) { addLog(res.message); updateUI(); }
+    else { alert(res.message); }
+  });
+}
 
 document.getElementById('btn-hire-researcher').addEventListener('click', async () => {
   const res = await window.electronAPI.actionHireResearcher();
