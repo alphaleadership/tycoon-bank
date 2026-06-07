@@ -98,6 +98,9 @@ const RESEARCH_TREE = {
   , 'r_sponsor_esport': { id: 'r_sponsor_esport', name: 'Sponsoring eSport', cost: 400, desc: 'Attire 10 clients passifs par jour', req: ['r_viral_marketing'] }
 };
 
+const researchesExt = require('./researches_ext.js');
+Object.assign(RESEARCH_TREE, researchesExt);
+
 
 const STOCKS = {
   'TECH': { name: 'TechCorp', price: 150, volatility: 0.10, history: [150] },
