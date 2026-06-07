@@ -90,6 +90,12 @@ const RESEARCH_TREE = {
   , 'r_hr_ai': { id: 'r_hr_ai', name: 'Tri IA des CVs', cost: 800, desc: 'Les employés gèrent 20% de clients en plus', req: ['r_hr', 'r_ai'] }
   , 'r_event_forecast': { id: 'r_event_forecast', name: 'Prévision d\'Événements', cost: 1200, desc: 'Augmente la probabilité d\'événements positifs', req: ['r_datamining'] }
   , 'r_corporate_retreat': { id: 'r_corporate_retreat', name: 'Séminaires d\'Entreprise', cost: 2000, desc: 'Divise par deux le taux de fuite des clients en cas d\'événement négatif', req: ['r_loyalty'] }
+  , 'r_agressive_trading': { id: 'r_agressive_trading', name: 'Trading Agressif', cost: 600, desc: 'Les traders génèrent 100€ supplémentaires par jour.', req: ['r_ai'] }
+  , 'r_global_expansion': { id: 'r_global_expansion', name: 'Expansion Mondiale', cost: 1500, desc: 'Attire massivement 20 clients passifs par jour', req: ['r_monopoly'] }
+  , 'r_neural_link': { id: 'r_neural_link', name: 'Interface Neuronale', cost: 3000, desc: 'Les chercheurs produisent +5 RP/jour', req: ['r_quantum'] }
+  , 'r_mars': { id: 'r_mars', name: 'Succursale Martienne', cost: 5000, desc: 'Frais de tenue +20€, l\'ultime frontière !', req: ['r_moon'] }
+  , 'r_tax_haven': { id: 'r_tax_haven', name: 'Paradis Fiscal Total', cost: 1200, desc: 'Réduit encore les salaires de 15%', req: ['r_offshore'] }
+  , 'r_sponsor_esport': { id: 'r_sponsor_esport', name: 'Sponsoring eSport', cost: 400, desc: 'Attire 10 clients passifs par jour', req: ['r_viral_marketing'] }
 };
 
 
@@ -604,6 +610,7 @@ ipcMain.handle('next-day', () => {
   let salaries = baseSalaries;
   if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries *= 0.8;
   if (gameState.unlockedResearches.includes('r_offshore')) salaries *= 0.9;
+  if (gameState.unlockedResearches.includes('r_tax_haven')) salaries *= 0.85;
   gameState.money -= salaries;
   
   // Frais de tenue de compte
@@ -612,6 +619,7 @@ ipcMain.handle('next-day', () => {
   if (gameState.unlockedResearches.includes('r_vip')) feePerClient += 5;
   if (gameState.unlockedResearches.includes('r_blockchain')) feePerClient += 3;
   if (gameState.unlockedResearches.includes('r_moon')) feePerClient += 10;
+  if (gameState.unlockedResearches.includes('r_mars')) feePerClient += 20;
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
@@ -628,6 +636,8 @@ ipcMain.handle('next-day', () => {
   }
   if(gameState.unlockedResearches.includes('r_eco')) newClients += 2;
   if(gameState.unlockedResearches.includes('r_gamification')) newClients += 5;
+  if(gameState.unlockedResearches.includes('r_global_expansion')) newClients += 20;
+  if(gameState.unlockedResearches.includes('r_sponsor_esport')) newClients += 10;
   
   let cbMessage = "";
   // Central Bank adjusts rates occasionally
@@ -835,6 +845,7 @@ ipcMain.handle('next-day', () => {
   if (gameState.unlockedResearches.includes('r_lab_equip')) rpPerResearcher = 3;
   if (gameState.unlockedResearches.includes('r_ai_research')) rpPerResearcher *= 2;
   if (gameState.unlockedResearches.includes('r_datamining')) rpPerResearcher += 1;
+  if (gameState.unlockedResearches.includes('r_neural_link')) rpPerResearcher += 5;
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
   if (gameState.unlockedResearches.includes('r_university')) {
@@ -887,6 +898,7 @@ ipcMain.handle('next-day', () => {
   let traderProfit = gameState.traders * 150;
   if (gameState.unlockedResearches.includes('r_crypto_trade')) traderProfit += gameState.traders * 50;
   if (gameState.unlockedResearches.includes('r_hedge')) traderProfit += gameState.traders * 100; // Revenu de base garanti par trader
+  if (gameState.unlockedResearches.includes('r_agressive_trading')) traderProfit += gameState.traders * 100;
   if (gameState.traders > 0) {
     let salesProfit = 0;
     let syms = Object.keys(gameState.stocks);
