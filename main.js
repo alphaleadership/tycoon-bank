@@ -436,8 +436,11 @@ ipcMain.handle('action-fire-hrmanager', () => {
 });
 
 ipcMain.handle('action-hire-researcher', () => {
+  if (gameState.researchers >= 100) {
+    return { success: false, message: "Limite maximale atteinte (100 chercheurs maximum)." };
+  }
   gameState.researchers++;
-  return { success: true, message: "Chercheur embauché !" };
+  return { success: true, message: "Chercheur recruté." };
 });
 
 ipcMain.handle('action-fire-researcher', () => {
@@ -777,6 +780,7 @@ ipcMain.handle('next-day', () => {
     // Gestion auto des Chercheurs (1 chercheur par 100k €)
     let desiredResearchers = Math.floor(gameState.money / 100000);
     if (desiredResearchers < 0) desiredResearchers = 0;
+    if (desiredResearchers > 100) desiredResearchers = 100;
     let hiredResearchers = 0;
     if (gameState.researchers < desiredResearchers) {
       hiredResearchers = desiredResearchers - gameState.researchers;

@@ -189,6 +189,7 @@ const updateUI = async () => {
   
   document.getElementById('val-rp').textContent = formatNumber(state.researchPoints);
   document.getElementById('val-researchers').textContent = formatNumber(state.researchers);
+  document.getElementById('btn-hire-researcher').disabled = state.researchers >= 100;
   document.getElementById('btn-fire-researcher').disabled = state.researchers === 0;
 
   document.getElementById('val-traders').textContent = formatNumber(state.traders);
