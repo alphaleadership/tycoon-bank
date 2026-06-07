@@ -17,7 +17,7 @@ for (let b of branches) {
     let title = b.flavor[(i - 1) % b.flavor.length] + (i > b.flavor.length ? ` Mk${Math.ceil(i/b.flavor.length)}` : '');
     let desc = `Avancée majeure en ${b.name}.`;
     
-    out += `  '${id}': { id: '${id}', name: '${title}', cost: ${cost}, desc: '${desc}', req: ['${prevReq}'] },\n`;
+    out += `  '${id}': { id: '${id}', name: "${title}", cost: ${cost}, desc: "${desc}", req: ['${prevReq}'] },\n`;
     prevReq = id;
   }
 }
