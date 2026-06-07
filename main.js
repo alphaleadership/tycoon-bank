@@ -733,8 +733,12 @@ ipcMain.handle('next-day', () => {
     
     let hiredTraders = 0;
     if (gameState.traders < desiredTraders) {
-      hiredTraders = desiredTraders - gameState.traders;
-      gameState.traders = desiredTraders;
+      let toHire = desiredTraders - gameState.traders;
+      if (gameState.money >= toHire * 300) {
+        gameState.money -= toHire * 300;
+        hiredTraders = toHire;
+        gameState.traders = desiredTraders;
+      }
     }
     
     let firedTraders = 0;
@@ -743,10 +747,59 @@ ipcMain.handle('next-day', () => {
       gameState.traders = desiredTraders;
     }
 
-    if (hired > 0) cbMessage += ` 👔 Recrutement auto (${hired} employé${hired>1?'s':''}).`;
-    if (fired > 0) cbMessage += ` 👔 Licenciement auto (${fired} employé${fired>1?'s':''}).`;
-    if (hiredTraders > 0) cbMessage += ` 📈 RH: Embauche de ${hiredTraders} trader(s).`;
-    if (firedTraders > 0) cbMessage += ` 📈 RH: Licenciement de ${firedTraders} trader(s).`;
+    // Gestion auto des Marketeurs (1 marketeur par niveau de marketing)
+    let desiredMarketers = gameState.marketingLevel;
+    let hiredMarketers = 0;
+    if (gameState.marketers < desiredMarketers) {
+      let toHire = desiredMarketers - gameState.marketers;
+      if (gameState.money >= toHire * 150) {
+        gameState.money -= toHire * 150;
+        hiredMarketers = toHire;
+        gameState.marketers = desiredMarketers;
+      }
+    }
+    let firedMarketers = 0;
+    if (gameState.marketers > desiredMarketers) {
+      firedMarketers = gameState.marketers - desiredMarketers;
+      gameState.marketers = desiredMarketers;
+    }
+
+    // Gestion auto des Chercheurs (1 chercheur par 100k €)
+    let desiredResearchers = Math.floor(gameState.money / 100000);
+    if (desiredResearchers < 0) desiredResearchers = 0;
+    let hiredResearchers = 0;
+    if (gameState.researchers < desiredResearchers) {
+      hiredResearchers = desiredResearchers - gameState.researchers;
+      gameState.researchers = desiredResearchers;
+    }
+    let firedResearchers = 0;
+    if (gameState.researchers > desiredResearchers) {
+      firedResearchers = gameState.researchers - desiredResearchers;
+      gameState.researchers = desiredResearchers;
+    }
+
+    // Gestion auto des Directeurs RH (1 pour 10 employés, max 5)
+    let desiredHr = Math.floor(gameState.employees / 10);
+    if (desiredHr > 5) desiredHr = 5;
+    let hiredHr = 0;
+    if ((gameState.hrManagers || 0) < desiredHr) {
+      let toHire = desiredHr - (gameState.hrManagers || 0);
+      if (gameState.money >= toHire * 1000) {
+        gameState.money -= toHire * 1000;
+        hiredHr = toHire;
+        gameState.hrManagers = desiredHr;
+      }
+    }
+
+    if (hired > 0) cbMessage += ` 👔 Auto (${hired} CS).`;
+    if (fired > 0) cbMessage += ` 👔 Auto (-${fired} CS).`;
+    if (hiredTraders > 0) cbMessage += ` 📈 RH: +${hiredTraders} trader.`;
+    if (firedTraders > 0) cbMessage += ` 📈 RH: -${firedTraders} trader.`;
+    if (hiredMarketers > 0) cbMessage += ` 📣 RH: +${hiredMarketers} marketeur.`;
+    if (firedMarketers > 0) cbMessage += ` 📣 RH: -${firedMarketers} marketeur.`;
+    if (hiredResearchers > 0) cbMessage += ` 🔬 RH: +${hiredResearchers} chercheur.`;
+    if (firedResearchers > 0) cbMessage += ` 🔬 RH: -${firedResearchers} chercheur.`;
+    if (hiredHr > 0) cbMessage += ` 👔 RH: +${hiredHr} directeur RH.`;
   }
 
   // Distribution automatique de prêts par les employés
