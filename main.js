@@ -682,6 +682,15 @@ ipcMain.handle('buy-rp', () => {
   return { success: false, message: "Fonds insuffisants pour acheter des RP (100k € requis)." };
 });
 
+ipcMain.handle('sell-rp', () => {
+  if (gameState.researchPoints >= 100) {
+    gameState.researchPoints -= 100;
+    gameState.money += 50000;
+    return { success: true, message: "Vente de 100 RP réussie (+50k €)." };
+  }
+  return { success: false, message: "Vous n'avez pas assez de RP à vendre (100 RP requis)." };
+});
+
 ipcMain.handle('buy-stock', (event, { symbol, amount }) => {
   const stock = gameState.stocks[symbol];
   if(!stock) return { success: false, message: "Action invalide." };

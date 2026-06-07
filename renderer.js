@@ -350,6 +350,12 @@ document.getElementById('btn-buy-rp').addEventListener('click', async () => {
   updateUI();
 });
 
+document.getElementById('btn-sell-rp').addEventListener('click', async () => {
+  const res = await window.electronAPI.sellRP();
+  addLog(res.message);
+  updateUI();
+});
+
 document.getElementById('btn-hire-researcher').addEventListener('click', async () => {
   const res = await window.electronAPI.actionHireResearcher();
   addLog(res.message);
