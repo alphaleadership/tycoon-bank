@@ -1080,6 +1080,7 @@ ipcMain.handle('next-day', () => {
     let maxLoanMultiplier = 5000;
     if (ur.has('r_subprime')) maxLoanMultiplier = 15000;
     else if (ur.has('r_risk')) maxLoanMultiplier = 8000;
+    if (ur.has('r_microcredit')) maxLoanMultiplier += 2000; // Cohérence avec action-loan manuel
     
     const maxLoan = gameState.clients * maxLoanMultiplier;
     let currentLoanGap = maxLoan - gameState.loansOut;
