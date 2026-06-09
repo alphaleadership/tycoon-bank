@@ -287,9 +287,22 @@ const renderStockMarket = (state) => {
       container.appendChild(div);
     }
   } else {
-    // Mise à jour partielle : seuls les textes et états changent
-    let i = 0;
+    // Mise à jour partielle via data-symbol : matching robuste indépendant de l'ordre DOM
+    // Construire une Map symbol -> element en O(n) une seule fois
+    const itemBySymbol = new Map();
+    for (const el of existingItems) {
+      if (el.dataset.symbol) itemBySymbol.set(el.dataset.symbol, el);
+    }
+
     for (const symbol of symbols) {
+      const item = itemBySymbol.get(symbol);
+      if (!item) {
+        // Élément manquant : forcer une reconstruction complète au prochain cycle
+        container.innerHTML = '';
+        renderStockMarket(state);
+        return;
+      }
+
       const stock = state.stocks[symbol];
       const owned = state.portfolio[symbol];
       let trend = 0;
@@ -299,7 +312,7 @@ const renderStockMarket = (state) => {
       }
       const trendClass = trend >= 0 ? 'text-success' : 'text-danger';
       const trendSymbol = trend >= 0 ? '▲' : '▼';
-      const item = existingItems[i++];
+
       const priceEl = item.querySelector('[data-price]');
       const trendEl = item.querySelector('[data-trend]');
       const ownedEl = item.querySelector('[data-owned]');
