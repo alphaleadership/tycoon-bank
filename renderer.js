@@ -39,9 +39,10 @@ const renderResearchTree = (state) => {
   const container = document.getElementById('research-tree-container');
   const msgContainer = document.getElementById('endgame-msg-container');
   
+  const urSet = new Set(state.unlockedResearches);
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
-    .every(k => state.unlockedResearches.includes(k));
+    .every(k => urSet.has(k));
 
   if (allDone) {
     if (msgContainer) msgContainer.innerHTML = '<div style="padding:1rem; text-align:center; background:rgba(100,255,150,0.1); border-radius:8px; margin-bottom:1rem;"><b style="color:var(--primary-color);">🌟 Arbre Technologique Complété !</b><br/><span style="font-size:0.85em;">Mode Endgame activé : Les jours passent automatiquement toutes les 10 secondes. Vos RP optimisent votre rentabilité (+0.1% / point).</span></div>';
@@ -246,41 +247,73 @@ const updateEndgameTree = (state) => {
 
 const renderStockMarket = (state) => {
   const container = document.getElementById('stock-list-container');
-  container.innerHTML = '';
   
-  for (const [symbol, stock] of Object.entries(state.stocks)) {
-    const owned = state.portfolio[symbol];
-    
-    // Calculate trend based on history
-    let trend = 0;
-    if(stock.history.length > 1) {
-      const prev = stock.history[stock.history.length - 2];
-      trend = ((stock.price - prev) / prev) * 100;
-    }
-    
-    const trendClass = trend >= 0 ? 'text-success' : 'text-danger';
-    const trendSymbol = trend >= 0 ? '▲' : '▼';
-    
-    const div = document.createElement('div');
-    div.className = 'stock-item';
-    
-    div.innerHTML = `
-      <div class="stock-header">
-        <div class="stock-name">${stock.name} <span style="font-size:0.8rem; color:var(--text-muted)">(${symbol})</span></div>
-        <div class="stock-price-box">
-          <div class="stock-price">${formatMoney(stock.price)}</div>
-          <div class="stock-trend ${trendClass}">${trendSymbol} ${Math.abs(trend).toFixed(2)}%</div>
+  // Mise à jour différentielle : si le conteneur a déjà les bons enfants, on met à jour les données seulement
+  const symbols = Object.keys(state.stocks);
+  const existingItems = container.querySelectorAll('.stock-item');
+  
+  if (existingItems.length !== symbols.length) {
+    // Première construction complète
+    container.innerHTML = '';
+    for (const symbol of symbols) {
+      const stock = state.stocks[symbol];
+      const owned = state.portfolio[symbol];
+      let trend = 0;
+      if (stock.history.length > 1) {
+        const prev = stock.history[stock.history.length - 2];
+        trend = ((stock.price - prev) / prev) * 100;
+      }
+      const trendClass = trend >= 0 ? 'text-success' : 'text-danger';
+      const trendSymbol = trend >= 0 ? '▲' : '▼';
+      const div = document.createElement('div');
+      div.className = 'stock-item';
+      div.dataset.symbol = symbol;
+      div.innerHTML = `
+        <div class="stock-header">
+          <div class="stock-name">${stock.name} <span style="font-size:0.8rem; color:var(--text-muted)">(${symbol})</span></div>
+          <div class="stock-price-box">
+            <div class="stock-price" data-price>${formatMoney(stock.price)}</div>
+            <div class="stock-trend ${trendClass}" data-trend>${trendSymbol} ${Math.abs(trend).toFixed(2)}%</div>
+          </div>
         </div>
-      </div>
-      <div class="stock-portfolio">
-        Possédé : <strong>${formatNumber(owned)}</strong> action(s)
-      </div>
-      <div class="stock-actions">
-        <button class="btn btn-buy stock-btn" onclick="window.buyStock('${symbol}', 1)" ${state.money < stock.price ? 'disabled' : ''}>Acheter (1)</button>
-        <button class="btn btn-sell stock-btn" onclick="window.sellStock('${symbol}', 1)" ${owned < 1 ? 'disabled' : ''}>Vendre (1)</button>
-      </div>
-    `;
-    container.appendChild(div);
+        <div class="stock-portfolio">
+          Possédé : <strong data-owned>${formatNumber(owned)}</strong> action(s)
+        </div>
+        <div class="stock-actions">
+          <button class="btn btn-buy stock-btn" data-buy onclick="window.buyStock('${symbol}', 1)" ${state.money < stock.price ? 'disabled' : ''}>Acheter (1)</button>
+          <button class="btn btn-sell stock-btn" data-sell onclick="window.sellStock('${symbol}', 1)" ${owned < 1 ? 'disabled' : ''}>Vendre (1)</button>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+  } else {
+    // Mise à jour partielle : seuls les textes et états changent
+    let i = 0;
+    for (const symbol of symbols) {
+      const stock = state.stocks[symbol];
+      const owned = state.portfolio[symbol];
+      let trend = 0;
+      if (stock.history.length > 1) {
+        const prev = stock.history[stock.history.length - 2];
+        trend = ((stock.price - prev) / prev) * 100;
+      }
+      const trendClass = trend >= 0 ? 'text-success' : 'text-danger';
+      const trendSymbol = trend >= 0 ? '▲' : '▼';
+      const item = existingItems[i++];
+      const priceEl = item.querySelector('[data-price]');
+      const trendEl = item.querySelector('[data-trend]');
+      const ownedEl = item.querySelector('[data-owned]');
+      const buyBtn = item.querySelector('[data-buy]');
+      const sellBtn = item.querySelector('[data-sell]');
+      if (priceEl) priceEl.textContent = formatMoney(stock.price);
+      if (trendEl) {
+        trendEl.textContent = `${trendSymbol} ${Math.abs(trend).toFixed(2)}%`;
+        trendEl.className = `stock-trend ${trendClass}`;
+      }
+      if (ownedEl) ownedEl.textContent = formatNumber(owned);
+      if (buyBtn) buyBtn.disabled = state.money < stock.price;
+      if (sellBtn) sellBtn.disabled = owned < 1;
+    }
   }
 };
 
@@ -354,9 +387,10 @@ const updateUI = async () => {
   document.getElementById('val-rate').innerText = (state.interestRate * 100).toFixed(1) + '%';
   document.getElementById('val-cb-rate').innerText = (state.centralBankRate * 100).toFixed(1) + '%';
   
+  const urSet = new Set(state.unlockedResearches);
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
-    .every(k => state.unlockedResearches.includes(k));
+    .every(k => urSet.has(k));
   if (allDone && document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'block';
     if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'inline-block';
@@ -633,10 +667,14 @@ updateUI();
 
 // Auto-advance day every 10 seconds if all researches are completed
 setInterval(async () => {
+  // Optimisation : on appelle nextDay() directement qui retourne le bilan
+  // puis updateUI() pour rafraîchir l'affichage — un seul aller-retour IPC
+  // au lieu de getState() + nextDay() + getState() (3 IPC avant)
   const state = await window.electronAPI.getState();
+  const urSet = new Set(state.unlockedResearches);
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
-    .every(k => state.unlockedResearches.includes(k));
+    .every(k => urSet.has(k));
     
   if (allDone) {
     const res = await window.electronAPI.nextDay();

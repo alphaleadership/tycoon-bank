@@ -418,19 +418,19 @@ ipcMain.handle('open-sponsor', () => {
 });
 
 ipcMain.handle('action-marketing', () => {
+  const ur = new Set(gameState.unlockedResearches);
   let cost = 500 * gameState.marketingLevel;
-  if (gameState.unlockedResearches.includes('r_targeted_ads')) cost *= 0.6;
+  if (ur.has('r_targeted_ads')) cost *= 0.6;
   
   if (gameState.money >= cost) {
     gameState.money -= cost;
     gameState.marketingLevel++;
     let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
-    if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
-      if (gameState.unlockedResearches.includes('r_neuromarketing')) gained = Math.floor(gained * 1.5);
-    if (gameState.unlockedResearches.includes('r_neuromarketing')) gained = Math.floor(gained * 1.5);
+    if (ur.has('r_viral_marketing')) gained *= 2;
+    if (ur.has('r_neuromarketing')) gained = Math.floor(gained * 1.5); // Correction: appliqué une seule fois
     
     let critical = false;
-    if (gameState.unlockedResearches.includes('r_influencer') && Math.random() < 0.2) {
+    if (ur.has('r_influencer') && Math.random() < 0.2) {
       gained *= 3;
       critical = true;
     }
@@ -517,7 +517,9 @@ ipcMain.handle('save-game', (event, slot = '1') => {
   currentSlot = slot;
   try {
     const savePath = path.join(app.getPath('userData'), `tycoon_save_${slot}.json`);
-    fs.writeFileSync(savePath, JSON.stringify(gameState));
+    // On exclut researchTree (statique, reconstruit au chargement) pour alléger la sauvegarde
+    const { researchTree, ...stateToSave } = gameState;
+    fs.writeFileSync(savePath, JSON.stringify(stateToSave));
     return { success: true, message: `Partie sauvegardée (Slot ${slot}) !` };
   } catch (err) {
     return { success: false, message: "Erreur lors de la sauvegarde." };
@@ -560,11 +562,11 @@ ipcMain.handle('load-game', (event, slot = '1') => {
 });
 
 ipcMain.handle('action-loan', () => {
+  const ur = new Set(gameState.unlockedResearches);
   let maxLoanMultiplier = 5000;
-  if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
-  else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;
-    if (gameState.unlockedResearches.includes('r_microcredit')) maxLoanMultiplier += 2000;
-  if (gameState.unlockedResearches.includes('r_microcredit')) maxLoanMultiplier += 2000;
+  if (ur.has('r_subprime')) maxLoanMultiplier = 15000;
+  else if (ur.has('r_risk')) maxLoanMultiplier = 8000;
+  if (ur.has('r_microcredit')) maxLoanMultiplier += 2000; // Correction: appliqué une seule fois
   
   const maxLoan = gameState.clients * maxLoanMultiplier;
   if (gameState.money > 0) {
@@ -744,18 +746,25 @@ ipcMain.handle('buy-rp', () => {
 });
 
 ipcMain.handle('sell-rp', () => {
+  let allDone = Object.keys(gameState.researchTree).filter(k => !gameState.researchTree[k].repeatable).every(k => gameState.unlockedResearches.includes(k));
+  let sellPrice = allDone ? 5 : 500; // Divisé par 100 en endgame
+  
   if (gameState.researchPoints >= 100) {
     gameState.researchPoints -= 100;
-    gameState.money += 50000;
-    return { success: true, message: "Vente de 100 RP réussie (+50k €)." };
+    let earned = 100 * sellPrice;
+    gameState.money += earned;
+    return { success: true, message: `Vente de 100 RP réussie (+${formatMoney(earned)}).` };
   }
   return { success: false, message: "Vous n'avez pas assez de RP à vendre (100 RP requis)." };
 });
 
 ipcMain.handle('sell-all-rp', () => {
+  let allDone = Object.keys(gameState.researchTree).filter(k => !gameState.researchTree[k].repeatable).every(k => gameState.unlockedResearches.includes(k));
+  let sellPrice = allDone ? 5 : 500; // Divisé par 100 en endgame
+  
   if (gameState.researchPoints > 0) {
     let rpToSell = gameState.researchPoints;
-    let earned = rpToSell * 500;
+    let earned = rpToSell * sellPrice;
     gameState.researchPoints = 0;
     gameState.money += earned;
     return { success: true, message: `Vente de ${formatNumber(rpToSell)} RP réussie (+${formatMoney(earned)}).` };
@@ -854,25 +863,29 @@ ipcMain.handle('sell-stock', (event, { symbol, amount }) => {
 ipcMain.handle('next-day', () => {
   gameState.day++;
   
+  // Créer un Set une seule fois pour tous les includes() de ce handler (O(1) vs O(n))
+  const ur = new Set(gameState.unlockedResearches);
+  const er = new Set(gameState.endgameResearches);
+  
   // Salaires
-  let baseSalaries = (gameState.employees * 100) + ((gameState.hrManagers || 0) * 500) + (gameState.researchers * (gameState.unlockedResearches.includes('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
+  let baseSalaries = (gameState.employees * 100) + ((gameState.hrManagers || 0) * 500) + (gameState.researchers * (ur.has('r_grants') ? 75 : 150)) + (gameState.traders * 300) + (gameState.marketers * 150);
   let salaries = baseSalaries;
-  if (gameState.unlockedResearches.includes('r_tax_evasion')) salaries *= 0.8;
-  if (gameState.unlockedResearches.includes('r_offshore')) salaries *= 0.9;
-  if (gameState.unlockedResearches.includes('r_tax_haven')) salaries *= 0.85;
+  if (ur.has('r_tax_evasion')) salaries *= 0.8;
+  if (ur.has('r_offshore')) salaries *= 0.9;
+  if (ur.has('r_tax_haven')) salaries *= 0.85;
   gameState.money -= salaries;
   
   // Frais de tenue de compte
-  let feePerClient = gameState.unlockedResearches.includes('r_premium') ? 10 : 5;
-  if (gameState.unlockedResearches.includes('r_mobile')) feePerClient += 2;
-  if (gameState.unlockedResearches.includes('r_vip')) feePerClient += 5;
-  if (gameState.unlockedResearches.includes('r_blockchain')) feePerClient += 3;
-  if (gameState.unlockedResearches.includes('r_moon')) feePerClient += 10;
-  if (gameState.unlockedResearches.includes('r_mars')) feePerClient += 20;
+  let feePerClient = ur.has('r_premium') ? 10 : 5;
+  if (ur.has('r_mobile')) feePerClient += 2;
+  if (ur.has('r_vip')) feePerClient += 5;
+  if (ur.has('r_blockchain')) feePerClient += 3;
+  if (ur.has('r_moon')) feePerClient += 10;
+  if (ur.has('r_mars')) feePerClient += 20;
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
-  const interestIncome = gameState.loansOut * gameState.interestRate * (gameState.endgameResearches.includes('e_finance') ? 10 : 1);
+  const interestIncome = gameState.loansOut * gameState.interestRate * (er.has('e_finance') ? 10 : 1);
   gameState.money += interestIncome;
   
   const principalRepayment = gameState.loansOut * 0.1;
@@ -880,14 +893,12 @@ ipcMain.handle('next-day', () => {
   gameState.loansOut -= principalRepayment;
   
   let newClients = Math.floor(Math.random() * gameState.marketingLevel * 5);
-  if (gameState.endgameResearches.includes('e_marketing')) newClients *= 10;
-  if(gameState.unlockedResearches.includes('r_online')) {
-    newClients += 5; // Passive clients
-  }
-  if(gameState.unlockedResearches.includes('r_eco')) newClients += 2;
-  if(gameState.unlockedResearches.includes('r_gamification')) newClients += 5;
-  if(gameState.unlockedResearches.includes('r_global_expansion')) newClients += 20;
-  if(gameState.unlockedResearches.includes('r_sponsor_esport')) newClients += 10;
+  if (er.has('e_marketing')) newClients *= 10;
+  if (ur.has('r_online')) newClients += 5; // Passive clients
+  if (ur.has('r_eco')) newClients += 2;
+  if (ur.has('r_gamification')) newClients += 5;
+  if (ur.has('r_global_expansion')) newClients += 20;
+  if (ur.has('r_sponsor_esport')) newClients += 10;
   
   let cbMessage = "";
   // Central Bank adjusts rates occasionally
@@ -895,7 +906,7 @@ ipcMain.handle('next-day', () => {
     let change = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 10 + 5) / 1000); // +/- 0.5% to 1.5%
     
     // Influence de la recherche r_cb_influence
-    if (gameState.unlockedResearches.includes('r_cb_influence')) {
+    if (ur.has('r_cb_influence')) {
       if (change > 0) change *= 0.5; // Divise par 2 les hausses
       if (change < 0) change *= 1.5; // Multiplie par 1.5 les baisses
     }
@@ -906,11 +917,11 @@ ipcMain.handle('next-day', () => {
     cbMessage += ` 🏦 La Banque Centrale fixe son taux à ${(gameState.centralBankRate*100).toFixed(1)}%.`;
   }
 
-  let maxDiff = gameState.unlockedResearches.includes('r_lobbying') ? 0.05 : 0.03;
-  if (gameState.unlockedResearches.includes('r_bribery')) maxDiff += 0.02;
-  if (gameState.unlockedResearches.includes('r_mindcontrol')) maxDiff = 0.99;
+  let maxDiff = ur.has('r_lobbying') ? 0.05 : 0.03;
+  if (ur.has('r_bribery')) maxDiff += 0.02;
+  if (ur.has('r_mindcontrol')) maxDiff = 0.99;
 
-  if (gameState.unlockedResearches.includes('r_auto_rate')) {
+  if (ur.has('r_auto_rate')) {
     gameState.interestRate = gameState.centralBankRate + maxDiff;
   }
 
@@ -919,9 +930,9 @@ ipcMain.handle('next-day', () => {
 
   if (rateDiff > maxDiff + 0.001) {
     let lost = Math.floor(gameState.clients * 0.05) + 1;
-    if (gameState.unlockedResearches.includes('r_loyalty')) lost = Math.floor(lost * 0.8);
-    if (gameState.unlockedResearches.includes('r_monopoly')) lost = Math.floor(lost * 0.5);
-    if (gameState.unlockedResearches.includes('r_mindcontrol')) lost = 0;
+    if (ur.has('r_loyalty')) lost = Math.floor(lost * 0.8);
+    if (ur.has('r_monopoly')) lost = Math.floor(lost * 0.5);
+    if (ur.has('r_mindcontrol')) lost = 0;
     gameState.clients -= lost;
     cbMessage += ` Taux trop élevés : -${lost} clients.`;
   } else if (rateDiff <= 0.001) {
@@ -933,28 +944,29 @@ ipcMain.handle('next-day', () => {
   if(gameState.clients < 0) gameState.clients = 0;
 
   // Gestion de la charge de travail et RH
-  let employeeEfficiency = gameState.unlockedResearches.includes('r_hr') ? 50 : 30;
-  if (gameState.unlockedResearches.includes('r_cloning')) employeeEfficiency = 100;
-  if (gameState.unlockedResearches.includes('r_hr_ai')) employeeEfficiency = Math.floor(employeeEfficiency * 1.2);
+  let employeeEfficiency = ur.has('r_hr') ? 50 : 30;
+  if (ur.has('r_cloning')) employeeEfficiency = 100;
+  if (ur.has('r_hr_ai')) employeeEfficiency = Math.floor(employeeEfficiency * 1.2);
   employeeEfficiency += (gameState.hrManagers || 0) * 50;
   
   // Auto-recrutement et licenciement si RH débloqué
-  if (gameState.unlockedResearches.includes('r_online')) {
+  if (ur.has('r_online')) {
     let passiveGained = Math.floor(Math.random() * 5 + 1);
     gameState.clients += passiveGained;
   }
   
   // Marketing automatisé
-  if (gameState.unlockedResearches.includes('r_auto_marketing')) {
+  if (ur.has('r_auto_marketing')) {
     let autoCost = 500 * gameState.marketingLevel;
-    if (gameState.unlockedResearches.includes('r_targeted_ads')) autoCost *= 0.6;
+    if (ur.has('r_targeted_ads')) autoCost *= 0.6;
     if (gameState.money >= autoCost) {
       gameState.money -= autoCost;
       gameState.marketingLevel++;
       let gained = Math.floor(Math.random() * 20 + 10) * gameState.marketingLevel;
-      if (gameState.unlockedResearches.includes('r_viral_marketing')) gained *= 2;
+      if (ur.has('r_viral_marketing')) gained *= 2;
+      if (ur.has('r_neuromarketing')) gained = Math.floor(gained * 1.5);
       let critical = false;
-      if (gameState.unlockedResearches.includes('r_influencer') && Math.random() < 0.2) {
+      if (ur.has('r_influencer') && Math.random() < 0.2) {
         gained *= 3;
         critical = true;
       }
@@ -966,12 +978,12 @@ ipcMain.handle('next-day', () => {
   // Action des Marketeurs
   if (gameState.marketers > 0) {
     let gainedMarketers = gameState.marketers * 3;
-    if (gameState.unlockedResearches.includes('r_viral_marketing')) gainedMarketers *= 2;
+    if (ur.has('r_viral_marketing')) gainedMarketers *= 2;
     gameState.clients += gainedMarketers;
     cbMessage += ` 📣 Équipe Marketing: +${gainedMarketers} clients.`;
   }
 
-  if (gameState.unlockedResearches.includes('r_hr')) {
+  if (ur.has('r_hr')) {
     let requiredEmployees = Math.ceil(gameState.clients / employeeEfficiency);
     if (requiredEmployees < 1) requiredEmployees = 1;
 
@@ -1066,8 +1078,8 @@ ipcMain.handle('next-day', () => {
   // Distribution automatique de prêts par les employés
   if (gameState.employees > 0 && gameState.money > 0 && gameState.autoLoanEnabled !== false) {
     let maxLoanMultiplier = 5000;
-    if (gameState.unlockedResearches.includes('r_subprime')) maxLoanMultiplier = 15000;
-    else if (gameState.unlockedResearches.includes('r_risk')) maxLoanMultiplier = 8000;
+    if (ur.has('r_subprime')) maxLoanMultiplier = 15000;
+    else if (ur.has('r_risk')) maxLoanMultiplier = 8000;
     
     const maxLoan = gameState.clients * maxLoanMultiplier;
     let currentLoanGap = maxLoan - gameState.loansOut;
@@ -1093,25 +1105,25 @@ ipcMain.handle('next-day', () => {
   }
 
   let rpPerResearcher = 2;
-  if (gameState.unlockedResearches.includes('r_lab_equip')) rpPerResearcher = 3;
-  if (gameState.unlockedResearches.includes('r_ai_research')) rpPerResearcher *= 2;
-  if (gameState.unlockedResearches.includes('r_datamining')) rpPerResearcher += 1;
-  if (gameState.unlockedResearches.includes('r_neural_link')) rpPerResearcher += 5;
-  if (gameState.endgameResearches.includes('e_tech')) rpPerResearcher *= 10;
+  if (ur.has('r_lab_equip')) rpPerResearcher = 3;
+  if (ur.has('r_ai_research')) rpPerResearcher *= 2;
+  if (ur.has('r_datamining')) rpPerResearcher += 1;
+  if (ur.has('r_neural_link')) rpPerResearcher += 5;
+  if (er.has('e_tech')) rpPerResearcher *= 10;
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
-  if (gameState.unlockedResearches.includes('r_university')) {
-    gameState.researchPoints += 5;
-  }
-  if (gameState.unlockedResearches.includes('r_quantum')) gameState.researchPoints *= 2;
+  if (ur.has('r_university')) gameState.researchPoints += 5;
+  if (ur.has('r_quantum')) gameState.researchPoints *= 2;
   
-  if(gameState.unlockedResearches.includes('r_ai')) {
-    gameState.money += 2000; // AI Trading passive income
-  }
-  if(gameState.unlockedResearches.includes('r_roboadvisor')) gameState.money += 1000;
-  if(gameState.unlockedResearches.includes('r_greenbonds')) gameState.money += 500;
+  if (ur.has('r_ai')) gameState.money += 2000; // AI Trading passive income
+  if (ur.has('r_roboadvisor')) gameState.money += 1000;
+  if (ur.has('r_greenbonds')) gameState.money += 500;
 
   let hftDividends = 0;
+  const hasHft = ur.has('r_hft');
+  const hftRate = 0.02 + (ur.has('r_quant') ? 0.01 : 0);
+  const hasInsider = ur.has('r_insider');
+  const hasFlashcrash = ur.has('r_flashcrash');
   // Stock Market Update
   for (let sym in gameState.stocks) {
     let stock = gameState.stocks[sym];
@@ -1119,13 +1131,13 @@ ipcMain.handle('next-day', () => {
     
     // Market crash or boom event
     if (Math.random() < 0.05) {
-      if (changePercent < 0 && gameState.unlockedResearches.includes('r_insider') && gameState.portfolio[sym] > 0) {
+      if (changePercent < 0 && hasInsider && gameState.portfolio[sym] > 0) {
         changePercent = 0; // Protégé du krach
         cbMessage += ` 🛡️ Krach évité sur ${stock.name}.`;
       } else {
         changePercent *= 3;
       }
-      if (changePercent < 0 && gameState.unlockedResearches.includes('r_flashcrash')) changePercent *= 0.5;
+      if (changePercent < 0 && hasFlashcrash) changePercent *= 0.5;
     } 
     
     let newPrice = stock.price * (1 + changePercent);
@@ -1136,28 +1148,28 @@ ipcMain.handle('next-day', () => {
     if (stock.history.length > 10) stock.history.shift();
 
     // Dividendes HFT
-    if (gameState.unlockedResearches.includes('r_hft') && gameState.portfolio[sym] > 0) {
-      hftDividends += (stock.price * gameState.portfolio[sym]) * (0.02 + (gameState.unlockedResearches.includes('r_quant') ? 0.01 : 0));
+    if (hasHft && gameState.portfolio[sym] > 0) {
+      hftDividends += (stock.price * gameState.portfolio[sym]) * hftRate;
     }
   }
 
   if (hftDividends > 0) {
-    if (gameState.endgameResearches.includes('e_tech')) hftDividends *= 100;
+    if (er.has('e_tech')) hftDividends *= 100;
     gameState.money += hftDividends;
     cbMessage += ` 💰 Dividendes HFT: +${hftDividends.toFixed(2)} €.`;
   }
 
   // Génération de Matière Noire Automatique
-  if (gameState.endgameResearches.includes('e_dm')) {
-    let dmGain = gameState.endgameResearches.includes('e_auto_dm') ? 2 : 1;
+  if (er.has('e_dm')) {
+    let dmGain = er.has('e_auto_dm') ? 2 : 1;
     gameState.darkMatter = (gameState.darkMatter || 0) + dmGain;
   }
 
   let traderMessage = "";
   let traderProfit = gameState.traders * 150;
-  if (gameState.unlockedResearches.includes('r_crypto_trade')) traderProfit += gameState.traders * 50;
-  if (gameState.unlockedResearches.includes('r_hedge')) traderProfit += gameState.traders * 100; // Revenu de base garanti par trader
-  if (gameState.unlockedResearches.includes('r_agressive_trading')) traderProfit += gameState.traders * 100;
+  if (ur.has('r_crypto_trade')) traderProfit += gameState.traders * 50;
+  if (ur.has('r_hedge')) traderProfit += gameState.traders * 100; // Revenu de base garanti par trader
+  if (ur.has('r_agressive_trading')) traderProfit += gameState.traders * 100;
   if (gameState.traders > 0) {
     let salesProfit = 0;
     let syms = Object.keys(gameState.stocks);
@@ -1208,7 +1220,9 @@ ipcMain.handle('next-day', () => {
   }
 
   // Bonus de rentabilité si toutes les recherches sont terminées
-  let allDone = Object.keys(gameState.researchTree).filter(k => !gameState.researchTree[k].repeatable).every(k => gameState.unlockedResearches.includes(k));
+  // Cache allDone: on compare la taille du Set des recherches non-répétables
+  const nonRepeatableKeys = Object.keys(RESEARCH_TREE).filter(k => !RESEARCH_TREE[k].repeatable);
+  let allDone = nonRepeatableKeys.every(k => ur.has(k));
   let profitBonus = 0;
   let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
   let consumedRP = 0;
