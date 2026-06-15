@@ -28,6 +28,19 @@ let endgameNetwork = null;
 let endgameNodes = null;
 let endgameEdges = null;
 
+const focusEndgameTier = (state, tier) => {
+  if (!endgameNetwork) return;
+  const ids = Object.keys(state.endgameTree || {})
+    .filter(id => (state.endgameTree[id].tier || 1) === tier);
+  if (ids.length === 0) return;
+
+  endgameNetwork.selectNodes(ids, false);
+  endgameNetwork.focus(ids, {
+    scale: 1.15,
+    animation: { duration: 500, easingFunction: 'easeInOutQuad' }
+  });
+};
+
 function getNodeCategory(id) {
   if (id.includes('tech') || ['r_quantum', 'r_ai', 'r_hft_ai', 'r_roboadvisor', 'r_neural_trading', 'r_datamining_lab', 'r_quant'].includes(id)) return 'Tech';
   if (id.includes('bio') || id === 'r_cloning') return 'Bio';
@@ -252,7 +265,7 @@ const updateEndgameTree = (state) => {
       titleStr += '\n✅ Débloqué';
     } else if (hasReq && state.darkMatter >= r.cost) {
       background = p.avail; border = p.availBorder;
-      titleStr += '\n▶ Disponible (Double-cliquez)';
+      titleStr += '\n▶ Disponible (Cliquez pour débloquer)';
     } else if (hasReq) {
       background = p.noFund; border = p.noFundBorder;
       titleStr += `\n🔒 DM insuffisante (${formatNumber(r.cost)} DM requis)`;
@@ -447,6 +460,15 @@ const updateUI = async () => {
     
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
     updateEndgameTree(state);
+    const tierButtons = [
+      ['tier1-badge', 1],
+      ['tier2-badge', 2],
+      ['tier3-badge', 3]
+    ];
+    tierButtons.forEach(([id, tier]) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.onclick = () => focusEndgameTier(state, tier);
+    });
     updateRebirthUI(state);
     updateAmfUI(state);
 
@@ -458,6 +480,8 @@ const updateUI = async () => {
 
     const countDone = (keys) => keys.filter(k => erSet.has(k)).length;
     const t1Done = countDone(tier1Keys), t2Done = countDone(tier2Keys), t3Done = countDone(tier3Keys);
+    const hasTier1 = t1Done > 0;
+    const hasTier2 = t2Done > 0;
 
     const t1El = document.getElementById('tier1-status');
     const t2El = document.getElementById('tier2-status');
@@ -466,11 +490,17 @@ const updateUI = async () => {
     const t3Badge = document.getElementById('tier3-badge');
 
     if (t1El) t1El.textContent = t1Done === tier1Keys.length ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;
-    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : t1Done === tier1Keys.length ? `${t2Done}/${tier2Keys.length} recherches` : 'Nécessite Palier I complet';
-    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : t2Done === tier2Keys.length ? `${t3Done}/${tier3Keys.length} recherches` : 'Nécessite Palier II complet';
+    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : hasTier1 ? `${t2Done}/${tier2Keys.length} recherches (Palier II disponible)` : 'Nécessite au moins une recherche du Palier I';
+    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : hasTier2 ? `${t3Done}/${tier3Keys.length} recherches (Palier III disponible)` : 'Nécessite au moins une recherche du Palier II';
 
-    if (t2Badge) t2Badge.style.opacity = t1Done === tier1Keys.length ? '1' : '0.5';
-    if (t3Badge) t3Badge.style.opacity = t2Done === tier2Keys.length ? '1' : '0.5';
+    if (t2Badge) {
+      t2Badge.style.opacity = hasTier1 ? '1' : '0.5';
+      t2Badge.style.cursor = 'pointer';
+    }
+    if (t3Badge) {
+      t3Badge.style.opacity = hasTier2 ? '1' : '0.5';
+      t3Badge.style.cursor = 'pointer';
+    }
   } else if (document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'none';
     if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'none';
