@@ -447,6 +447,7 @@ const updateUI = async () => {
     
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
     updateEndgameTree(state);
+    updateRebirthUI(state);
 
     // Mise à jour des badges de palier
     const erSet = new Set(state.endgameResearches);
@@ -751,4 +752,124 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const target = document.getElementById(btn.getAttribute('data-tab'));
     if (target) target.style.display = 'block';
   });
+});
+
+// ── REBIRTH SYSTEM ────────────────────────────────────────────────────────────
+
+const REBIRTH_UPGRADES_DEF = [
+  { id: 'rb_money',    name: 'Héritage Capital',      icon: '💰', desc: 'Démarre avec 10× plus d\'argent par niveau.', maxLevel: 8 },
+  { id: 'rb_clients',  name: 'Réseau Fidèle',          icon: '👥', desc: '+200 clients au départ par niveau.',           maxLevel: 10 },
+  { id: 'rb_rp_speed', name: 'Mémoire Scientifique',   icon: '🔬', desc: '+1 RP/chercheur/jour par niveau.',             maxLevel: 10 },
+  { id: 'rb_income',   name: 'Multiplicateur Karmique', icon: '✨', desc: 'Revenus journaliers ×(1+0.25×niv).',          maxLevel: 8 },
+  { id: 'rb_salary',   name: 'Syndicats Démantelés',    icon: '🏢', desc: '-5% de masse salariale par niveau.',           maxLevel: 10 },
+  { id: 'rb_dm',       name: 'Noyau de Matière Noire',  icon: '⚫', desc: '+1 DM au départ par niveau.',                  maxLevel: 5 }
+];
+
+// Coûts (doivent correspondre à REBIRTH_UPGRADES dans main.js)
+const rbCostFn = {
+  rb_money:    (lvl) => lvl + 1,
+  rb_clients:  (lvl) => lvl + 1,
+  rb_rp_speed: (lvl) => (lvl + 1) * 2,
+  rb_income:   (lvl) => (lvl + 1) * 3,
+  rb_salary:   (lvl) => (lvl + 1) * 2,
+  rb_dm:       (lvl) => (lvl + 1) * 5
+};
+
+const renderRebirthUpgrades = (state) => {
+  const grid = document.getElementById('rebirth-upgrades-grid');
+  if (!grid) return;
+  const upgrades = state.rebirthUpgrades || {};
+
+  grid.innerHTML = REBIRTH_UPGRADES_DEF.map(upg => {
+    const lvl = upgrades[upg.id] || 0;
+    const isMax = lvl >= upg.maxLevel;
+    const cost = isMax ? '–' : rbCostFn[upg.id](lvl);
+    const ep = state.prestigePoints || 0;
+    const canAfford = !isMax && ep >= rbCostFn[upg.id](lvl);
+
+    const progress = (lvl / upg.maxLevel) * 100;
+    const btnStyle = isMax
+      ? 'background: rgba(39,174,96,0.2); border-color: #27ae60; color: #27ae60; cursor: default;'
+      : canAfford
+        ? 'background: rgba(231,76,60,0.2); border-color: #e74c3c; color: #e74c3c; cursor: pointer;'
+        : 'background: rgba(127,140,141,0.1); border-color: #7f8c8d; color: #7f8c8d; cursor: not-allowed;';
+
+    return `
+      <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 1.4rem;">${upg.icon}</span>
+          <div>
+            <div style="font-weight: bold; color: #ecf0f1; font-size: 0.95rem;">${upg.name}</div>
+            <div style="font-size: 0.75rem; color: #95a5a6;">${upg.desc}</div>
+          </div>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 6px; margin: 0.5rem 0;">
+          <div style="background: #e74c3c; width: ${progress}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+          <span style="font-size: 0.8rem; color: #bdc3c7;">Niv. <strong>${lvl}</strong> / ${upg.maxLevel}</span>
+          <button
+            onclick="window.buyRebirthUpgrade('${upg.id}')"
+            style="padding: 0.3rem 0.75rem; font-size: 0.8rem; border-radius: 6px; border: 1px solid; ${btnStyle}"
+            ${isMax || !canAfford ? 'disabled' : ''}>
+            ${isMax ? '✅ MAX' : `Améliorer (${cost} EP)`}
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+};
+
+const updateRebirthUI = async (state) => {
+  const navRebirth = document.getElementById('nav-rebirth');
+
+  // Afficher l'onglet dès qu'on a fait au moins 1 rebirth ou qu'on peut en faire
+  const erSet = new Set(state.endgameResearches || []);
+  const canRebirth = erSet.has('e3_omniscience');
+  const hasRebirthed = (state.rebirthCount || 0) > 0;
+
+  if ((canRebirth || hasRebirthed) && navRebirth) {
+    navRebirth.style.display = 'inline-block';
+  }
+
+  if (document.getElementById('val-ep')) {
+    document.getElementById('val-ep').textContent = formatNumber(state.prestigePoints || 0);
+  }
+  if (document.getElementById('val-rebirth-count')) {
+    document.getElementById('val-rebirth-count').textContent = formatNumber(state.rebirthCount || 0);
+  }
+
+  const previewEl = document.getElementById('val-ep-preview');
+  const btnRebirth = document.getElementById('btn-do-rebirth');
+  const lockMsg = document.getElementById('rebirth-lock-msg');
+
+  if (canRebirth) {
+    const preview = await window.electronAPI.rebirthPreview();
+    if (previewEl) previewEl.textContent = `+${formatNumber(preview.epGain)} EP`;
+    if (btnRebirth) btnRebirth.disabled = false;
+    if (lockMsg) lockMsg.textContent = '✅ Prêt pour le Rebirth !';
+    if (lockMsg) lockMsg.style.color = '#2ecc71';
+  } else {
+    if (previewEl) previewEl.textContent = '–';
+    if (btnRebirth) btnRebirth.disabled = true;
+    if (lockMsg) lockMsg.textContent = 'Nécessite : Omniscience Financière (Palier III)';
+    if (lockMsg) lockMsg.style.color = '#7f8c8d';
+  }
+
+  renderRebirthUpgrades(state);
+};
+
+// Binding global pour les boutons onclick injectés
+window.buyRebirthUpgrade = async (id) => {
+  const res = await window.electronAPI.buyRebirthUpgrade(id);
+  addLog(res.message);
+  updateUI();
+};
+
+// Bouton Rebirth
+document.getElementById('btn-do-rebirth')?.addEventListener('click', async () => {
+  const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir effectuer un Rebirth ?\n\nToute votre progression (argent, clients, recherches, ascension) sera réinitialisée.\nSeuls vos Éclats de Prestige et améliorations permanentes seront conservés.');
+  if (!confirmed) return;
+  const res = await window.electronAPI.doRebirth();
+  addLog(`<b style="color:#e74c3c">${res.message}</b>`);
+  updateUI();
 });

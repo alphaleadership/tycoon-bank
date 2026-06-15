@@ -307,6 +307,61 @@ const ENDGAME_RESEARCH_TREE = {
   'e3_omniscience': { id: 'e3_omniscience', name: 'Omniscience Financière', cost: 5000, desc: 'Votre banque transcende le temps et l\'espace. Score de prestige ultime.', req: ['e3_timewarp', 'e3_singularity'], tier: 3 }
 };
 
+// ── SYSTÈME DE REBIRTH ───────────────────────────────────────────────────────
+const REBIRTH_UPGRADES = {
+  'rb_money': {
+    id: 'rb_money', name: 'Héritage Capital', icon: '💰',
+    desc: 'Démarrez avec 10× plus d\'argent par niveau.',
+    effect: (lvl) => `Début : ${formatNumber(100000 * Math.pow(10, lvl))} €`,
+    costPerLevel: (lvl) => lvl + 1,
+    maxLevel: 8
+  },
+  'rb_clients': {
+    id: 'rb_clients', name: 'Réseau Fidèle', icon: '👥',
+    desc: 'Démarrez avec +200 clients par niveau.',
+    effect: (lvl) => `+${lvl * 200} clients au départ`,
+    costPerLevel: (lvl) => lvl + 1,
+    maxLevel: 10
+  },
+  'rb_rp_speed': {
+    id: 'rb_rp_speed', name: 'Mémoire Scientifique', icon: '🔬',
+    desc: 'Les chercheurs produisent +1 RP par niveau.',
+    effect: (lvl) => `+${lvl} RP/chercheur/jour`,
+    costPerLevel: (lvl) => (lvl + 1) * 2,
+    maxLevel: 10
+  },
+  'rb_income': {
+    id: 'rb_income', name: 'Multiplicateur Karmique', icon: '✨',
+    desc: 'Tous les revenus journaliers ×(1 + 0.25×niveau).',
+    effect: (lvl) => `Revenus ×${(1 + lvl * 0.25).toFixed(2)}`,
+    costPerLevel: (lvl) => (lvl + 1) * 3,
+    maxLevel: 8
+  },
+  'rb_salary': {
+    id: 'rb_salary', name: 'Syndicats Démantelés', icon: '🏢',
+    desc: 'Salaires réduits de 5% supplémentaires par niveau.',
+    effect: (lvl) => `-${lvl * 5}% de masse salariale`,
+    costPerLevel: (lvl) => (lvl + 1) * 2,
+    maxLevel: 10
+  },
+  'rb_dm': {
+    id: 'rb_dm', name: 'Noyau de Matière Noire', icon: '⚫',
+    desc: 'Démarrez chaque rebirth avec +1 DM par niveau.',
+    effect: (lvl) => `+${lvl} DM au départ`,
+    costPerLevel: (lvl) => (lvl + 1) * 5,
+    maxLevel: 5
+  }
+};
+
+const calcRebirthEP = (state) => {
+  const erCount = (state.endgameResearches || []).length;
+  const dm = state.darkMatter || 0;
+  const rb = state.rebirthCount || 0;
+  return Math.max(1, 1 + rb + Math.floor(dm / 50) + erCount * 2);
+};
+
+const getRbUpgLevel = (id) => (gameState.rebirthUpgrades || {})[id] || 0;
+
 let gameState = {
   day: 1,
   money: 100000,
@@ -331,7 +386,11 @@ let gameState = {
   researchTree: RESEARCH_TREE,
   endgameTree: ENDGAME_RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
-  portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
+  portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+  // ── Rebirth ──
+  rebirthCount: 0,
+  prestigePoints: 0,
+  rebirthUpgrades: {}
 };
 
 let currentSlot = '1';
@@ -422,9 +481,105 @@ ipcMain.handle('hard-reset', () => {
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
     endgameTree: JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
-    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
+    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+    rebirthCount: 0,
+    prestigePoints: 0,
+    rebirthUpgrades: {}
   };
   return { success: true, message: "La partie a été réinitialisée de zéro !" };
+});
+
+// ── REBIRTH HANDLERS ─────────────────────────────────────────────────────
+ipcMain.handle('rebirth-preview', () => {
+  const canRebirth = gameState.endgameResearches.includes('e3_omniscience');
+  const epGain = calcRebirthEP(gameState);
+  return { canRebirth, epGain, currentEP: gameState.prestigePoints || 0, rebirthCount: gameState.rebirthCount || 0 };
+});
+
+ipcMain.handle('do-rebirth', () => {
+  if (!gameState.endgameResearches.includes('e3_omniscience')) {
+    return { success: false, message: "Vous devez débloquer l'Omniscience Financière (Palier III) pour effectuer un Rebirth." };
+  }
+
+  const epGain = calcRebirthEP(gameState);
+  const prevRb = gameState.rebirthCount || 0;
+  const prevEP = gameState.prestigePoints || 0;
+  const prevUpgrades = { ...(gameState.rebirthUpgrades || {}) };
+
+  // Appliquer les bonus des upgrades au nouvel état de départ
+  const rbMoney = getRbUpgLevel('rb_money');
+  const rbClients = getRbUpgLevel('rb_clients');
+  const rbDm = getRbUpgLevel('rb_dm');
+  const rbRp = getRbUpgLevel('rb_rp_speed');
+
+  const startMoney = 100000 * Math.pow(10, rbMoney);
+  const startClients = 10 + rbClients * 200;
+  const startDM = rbDm;
+  const startRP = rbRp * 5; // 5 RP de bonus par niveau de mémoire scientifique
+
+  gameState = {
+    day: 1,
+    money: startMoney,
+    clients: startClients,
+    employees: 2,
+    hrManagers: 0,
+    researchers: 0,
+    traders: 0,
+    marketers: 0,
+    researchPoints: startRP,
+    loansOut: 0,
+    interestRate: 0.05,
+    centralBankRate: 0.03,
+    marketingLevel: 1,
+    autoLoanEnabled: true,
+    autoConsumeRPEnabled: true,
+    megaMarketing: 0,
+    megaLobbying: 0,
+    darkMatter: startDM,
+    endgameResearches: [],
+    unlockedResearches: [],
+    researchTree: RESEARCH_TREE,
+    endgameTree: ENDGAME_RESEARCH_TREE,
+    stocks: JSON.parse(JSON.stringify(STOCKS)),
+    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+    rebirthCount: prevRb + 1,
+    prestigePoints: prevEP + epGain,
+    rebirthUpgrades: prevUpgrades
+  };
+
+  return {
+    success: true,
+    message: `🔁 Rebirth #${prevRb + 1} effectué ! +${epGain} Éclats de Prestige (Total : ${prevEP + epGain} EP). Bonne chance pour cette nouvelle vie !`
+  };
+});
+
+ipcMain.handle('buy-rebirth-upgrade', (event, id) => {
+  const upg = REBIRTH_UPGRADES[id];
+  if (!upg) return { success: false, message: "Amélioration introuvable." };
+
+  if (!gameState.rebirthUpgrades) gameState.rebirthUpgrades = {};
+  const currentLvl = gameState.rebirthUpgrades[id] || 0;
+
+  if (currentLvl >= upg.maxLevel) {
+    return { success: false, message: `${upg.name} est au niveau maximum (${upg.maxLevel}).` };
+  }
+
+  const cost = upg.costPerLevel(currentLvl);
+  const ep = gameState.prestigePoints || 0;
+
+  if (ep < cost) {
+    return { success: false, message: `EP insuffisants. Il vous faut ${cost} EP (vous avez ${ep} EP).` };
+  }
+
+  gameState.prestigePoints -= cost;
+  gameState.rebirthUpgrades[id] = currentLvl + 1;
+
+  return {
+    success: true,
+    message: `✨ ${upg.name} amélioré au niveau ${currentLvl + 1} ! (-${cost} EP)`,
+    newLevel: currentLvl + 1,
+    effect: upg.effect(currentLvl + 1)
+  };
 });
 
 ipcMain.handle('open-sponsor', () => {
@@ -892,6 +1047,8 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_offshore')) salaries *= 0.9;
   if (ur.has('r_tax_haven')) salaries *= 0.85;
   if (er.has('e2_workforce')) salaries *= 0.1; // Palier II : Automatisation Totale (÷10)
+  const rbSalaryLvl = getRbUpgLevel('rb_salary');
+  if (rbSalaryLvl > 0) salaries *= (1 - rbSalaryLvl * 0.05); // Rebirth : Syndicats Démantelés
   gameState.money -= salaries;
   
   // Frais de tenue de compte
@@ -1135,6 +1292,8 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_datamining')) rpPerResearcher += 1;
   if (ur.has('r_neural_link')) rpPerResearcher += 5;
   if (er.has('e_tech')) rpPerResearcher *= 10;
+  const rbRpLvl = getRbUpgLevel('rb_rp_speed');
+  if (rbRpLvl > 0) rpPerResearcher += rbRpLvl; // Rebirth : Mémoire Scientifique
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
   if (ur.has('r_university')) gameState.researchPoints += 5;
@@ -1274,6 +1433,14 @@ ipcMain.handle('next-day', () => {
   }
   
   // Hard cap pour éviter le dépassement (Infinity)
+  // Rebirth : Multiplicateur Karmique appliqué sur le revenu brut
+  const rbIncomeLvl = getRbUpgLevel('rb_income');
+  if (rbIncomeLvl > 0) {
+    const karmicBonus = totalGrossIncome * rbIncomeLvl * 0.25;
+    gameState.money += karmicBonus;
+    totalGrossIncome += karmicBonus;
+  }
+
   if (gameState.money > 1e66) gameState.money = 1e66;
   if (gameState.clients > 1e66) gameState.clients = 1e66;
 

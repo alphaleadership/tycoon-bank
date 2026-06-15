@@ -33,5 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   nextDay: () => ipcRenderer.invoke('next-day'),
   checkUpdate: () => ipcRenderer.invoke('check-update'),
   hardReset: () => ipcRenderer.invoke('hard-reset'),
-  openSponsor: () => ipcRenderer.invoke('open-sponsor')
+  openSponsor: () => ipcRenderer.invoke('open-sponsor'),
+  rebirthPreview: () => ipcRenderer.invoke('rebirth-preview'),
+  doRebirth: () => ipcRenderer.invoke('do-rebirth'),
+  buyRebirthUpgrade: (id) => ipcRenderer.invoke('buy-rebirth-upgrade', id)
 });
