@@ -36,5 +36,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openSponsor: () => ipcRenderer.invoke('open-sponsor'),
   rebirthPreview: () => ipcRenderer.invoke('rebirth-preview'),
   doRebirth: () => ipcRenderer.invoke('do-rebirth'),
-  buyRebirthUpgrade: (id) => ipcRenderer.invoke('buy-rebirth-upgrade', id)
+  buyRebirthUpgrade: (id) => ipcRenderer.invoke('buy-rebirth-upgrade', id),
+  amfActivate: () => ipcRenderer.invoke('amf-activate'),
+  amfAction: (id) => ipcRenderer.invoke('amf-action', id),
+  amfBuyMandat: (id) => ipcRenderer.invoke('amf-buy-mandat', id)
 });

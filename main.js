@@ -362,6 +362,88 @@ const calcRebirthEP = (state) => {
 
 const getRbUpgLevel = (id) => (gameState.rebirthUpgrades || {})[id] || 0;
 
+// ── SYSTÈME AMF ───────────────────────────────────────────────────────────────
+const AMF_REQUIRED_REBIRTHS = 50;
+
+const AMF_MANDATS = {
+  m_transparence:   { id: 'm_transparence',   name: 'Mandat Transparence',        icon: '📋', cost: 10,  desc: '+5 Autorité/jour.',                         effect: 'autoritePerDay+5'   },
+  m_anti_blanch:    { id: 'm_anti_blanch',     name: 'Anti-Blanchiment',           icon: '🚿', cost: 20,  desc: '+50M€/jour d\'amendes passives.',            effect: 'finePerDay+5e7'     },
+  m_hft_ctrl:       { id: 'm_hft_ctrl',        name: 'Contrôle HFT',               icon: '⚡', cost: 35,  desc: 'Toutes les amendes ×2.',                    effect: 'fineMultiplier×2'   },
+  m_supervision:    { id: 'm_supervision',      name: 'Supervision Cosmique',       icon: '🔭', cost: 60,  desc: '+20 Autorité/jour. Crashes impossibles.',    effect: 'autoritePerDay+20+nocrash' },
+  m_omnireg:        { id: 'm_omnireg',          name: 'Régulation Omniverselle',    icon: '👑', cost: 100, desc: '+5% des revenus bancaires → Autorité.',      effect: 'bankRevenueToAuth'  }
+};
+
+const AMF_ACTIONS = {
+  a_amende_std:     { id: 'a_amende_std',    name: 'Amende Standard',         icon: '📄', costAuth: 10,  cooldown: 1,  desc: 'Inflige une amende à une banque rivale (+5B€).' },
+  a_enquete:        { id: 'a_enquete',        name: 'Ouvrir une Enquête',      icon: '🔍', costAuth: 50,  cooldown: 7,  desc: 'Enquête de 7 jours → +500B€ d\'amendes.' },
+  a_gel_actifs:     { id: 'a_gel_actifs',     name: 'Gel d\'Actifs',           icon: '🧊', costAuth: 80,  cooldown: 5,  desc: 'Gèle les actifs. Crashes de marché -75% pendant 10j.' },
+  a_revoc_licence:  { id: 'a_revoc_licence',  name: 'Révoquer une Licence',    icon: '🚫', costAuth: 120, cooldown: 14, desc: 'Révocation → +2000B€ + +10 Influence Politique.' },
+  a_intervention:   { id: 'a_intervention',   name: 'Intervention de Marché',  icon: '📈', costAuth: 200, cooldown: 10, desc: 'Stabilise le marché (+50% dividendes) pendant 15j.' },
+  a_nationalisation:{ id: 'a_nationalisation', name: 'Nationalisation',         icon: '🏛️', costAuth: 500, cooldown: 30, desc: 'Nationalise une banque → revenus permanents +25%.' }
+};
+
+const getAmfMandat = (id) => (gameState.amf?.mandats || []).includes(id);
+const getAmfCooldown = (id) => (gameState.amf?.cooldowns || {})[id] || 0;
+
+const amfNextDay = () => {
+  if (!gameState.amf?.active) return '';
+  const amf = gameState.amf;
+  const mandats = new Set(amf.mandats || []);
+  let log = '';
+
+  // Génération d'Autorité passive
+  let autoriteGain = 1; // base
+  if (mandats.has('m_transparence')) autoriteGain += 5;
+  if (mandats.has('m_supervision')) autoriteGain += 20;
+  if (mandats.has('m_omnireg')) {
+    // 5% des revenus bancaires → Autorité (1 Autorité = 1T€ de revenus)
+    const bankRev = gameState.money * 0.05;
+    autoriteGain += Math.floor(bankRev / 1e12);
+  }
+  amf.autorite = (amf.autorite || 0) + autoriteGain;
+
+  // Amendes passives
+  let fineGain = 0;
+  if (mandats.has('m_anti_blanch')) fineGain += 5e7;
+  if (mandats.has('m_hft_ctrl')) fineGain *= 2;
+  if (fineGain > 0) {
+    gameState.money += fineGain;
+    amf.totalFines = (amf.totalFines || 0) + fineGain;
+    log += ` 🏛️ Amendes passives : +${formatMoney(fineGain)}.`;
+  }
+
+  // Bonus stabilisation marché (gel actifs / intervention)
+  if ((amf.gelActifsRemaining || 0) > 0) amf.gelActifsRemaining--;
+  if ((amf.interventionRemaining || 0) > 0) amf.interventionRemaining--;
+
+  // Résolution des enquêtes
+  if ((amf.enqueteRemaining || 0) > 0) {
+    amf.enqueteRemaining--;
+    if (amf.enqueteRemaining === 0) {
+      let fine = 5e11; // 500B€
+      if (mandats.has('m_hft_ctrl')) fine *= 2;
+      gameState.money += fine;
+      amf.totalFines = (amf.totalFines || 0) + fine;
+      log += ` 🔍 Enquête résolue : +${formatMoney(fine)} d'amendes !`;
+    }
+  }
+
+  // Décrémente tous les cooldowns
+  const cd = amf.cooldowns || {};
+  for (const k of Object.keys(cd)) { if (cd[k] > 0) cd[k]--; }
+  amf.cooldowns = cd;
+
+  // Nationalisations permanentes
+  const natBonus = (amf.nationalisations || 0) * 0.25;
+  if (natBonus > 0 && gameState.money > 0) {
+    const bonus = gameState.money * natBonus * 0.001; // 0.1% par nationalisation par jour (sinon trop fort)
+    gameState.money += bonus;
+  }
+
+  amf.amfDay = (amf.amfDay || 0) + 1;
+  return log;
+};
+
 let gameState = {
   day: 1,
   money: 100000,
@@ -390,7 +472,9 @@ let gameState = {
   // ── Rebirth ──
   rebirthCount: 0,
   prestigePoints: 0,
-  rebirthUpgrades: {}
+  rebirthUpgrades: {},
+  // ── AMF ──
+  amf: null
 };
 
 let currentSlot = '1';
@@ -584,6 +668,111 @@ ipcMain.handle('buy-rebirth-upgrade', (event, id) => {
 
 ipcMain.handle('open-sponsor', () => {
   shell.openExternal('https://github.com/sponsors/alphaleadership');
+});
+
+// ── AMF HANDLERS ──────────────────────────────────────────────────────────────
+ipcMain.handle('amf-activate', () => {
+  const rb = gameState.rebirthCount || 0;
+  if (rb < AMF_REQUIRED_REBIRTHS) {
+    return { success: false, message: `Il faut atteindre ${AMF_REQUIRED_REBIRTHS} rebirths pour débloquer l'AMF (vous avez ${rb} rebirths).` };
+  }
+  if (gameState.amf?.active) {
+    return { success: false, message: 'Le mode AMF est déjà actif.' };
+  }
+  gameState.amf = {
+    active: true, amfDay: 0,
+    autorite: 100,           // 100 Autorité de départ
+    influence: 0,
+    totalFines: 0,
+    mandats: [],
+    cooldowns: {},
+    nationalisations: 0,
+    gelActifsRemaining: 0,
+    interventionRemaining: 0,
+    enqueteRemaining: 0
+  };
+  return { success: true, message: '🏛️ Félicitations ! Vous êtes désormais l\'Autorité des Marchés Financiers. Le pouvoir réglementaire est entre vos mains.' };
+});
+
+ipcMain.handle('amf-action', (event, actionId) => {
+  if (!gameState.amf?.active) return { success: false, message: 'Mode AMF non actif.' };
+  const action = AMF_ACTIONS[actionId];
+  if (!action) return { success: false, message: 'Action inconnue.' };
+
+  const amf = gameState.amf;
+  const cd = amf.cooldowns || {};
+  if ((cd[actionId] || 0) > 0) {
+    return { success: false, message: `${action.name} en recharge (${cd[actionId]} jours restants).` };
+  }
+  if ((amf.autorite || 0) < action.costAuth) {
+    return { success: false, message: `Autorité insuffisante. Nécessite ${action.costAuth} 🏛️ (vous avez ${amf.autorite}).` };
+  }
+
+  amf.autorite -= action.costAuth;
+  cd[actionId] = action.cooldown;
+  amf.cooldowns = cd;
+
+  const mandats = new Set(amf.mandats || []);
+  const fineMulti = mandats.has('m_hft_ctrl') ? 2 : 1;
+  let resultMsg = '';
+
+  switch (actionId) {
+    case 'a_amende_std': {
+      const fine = 5e9 * fineMulti;
+      gameState.money += fine;
+      amf.totalFines = (amf.totalFines || 0) + fine;
+      resultMsg = `📄 Amende standard infligée : +${formatMoney(fine)} récupérés.`;
+      break;
+    }
+    case 'a_enquete': {
+      amf.enqueteRemaining = 7;
+      resultMsg = `🔍 Enquête ouverte. Résultat dans 7 jours (+${formatMoney(5e11 * fineMulti)} attendus).`;
+      break;
+    }
+    case 'a_gel_actifs': {
+      amf.gelActifsRemaining = 10;
+      resultMsg = `🧊 Actifs gelés pendant 10 jours. Crashes réduits de 75%.`;
+      break;
+    }
+    case 'a_revoc_licence': {
+      const fine = 2e12 * fineMulti;
+      gameState.money += fine;
+      amf.totalFines = (amf.totalFines || 0) + fine;
+      amf.influence = (amf.influence || 0) + 10;
+      resultMsg = `🚫 Licence révoquée : +${formatMoney(fine)} + 10 Influence Politique.`;
+      break;
+    }
+    case 'a_intervention': {
+      amf.interventionRemaining = 15;
+      resultMsg = `📈 Intervention de marché : +50% dividendes pendant 15 jours.`;
+      break;
+    }
+    case 'a_nationalisation': {
+      amf.nationalisations = (amf.nationalisations || 0) + 1;
+      resultMsg = `🏛️ Banque nationalisée ! Revenus permanents +${(amf.nationalisations * 0.025).toFixed(1)}% (cumulé).`;
+      break;
+    }
+  }
+
+  return { success: true, message: resultMsg };
+});
+
+ipcMain.handle('amf-buy-mandat', (event, mandatId) => {
+  if (!gameState.amf?.active) return { success: false, message: 'Mode AMF non actif.' };
+  const mandat = AMF_MANDATS[mandatId];
+  if (!mandat) return { success: false, message: 'Mandat inconnu.' };
+
+  const amf = gameState.amf;
+  if ((amf.mandats || []).includes(mandatId)) {
+    return { success: false, message: `${mandat.name} est déjà actif.` };
+  }
+  if ((amf.influence || 0) < mandat.cost) {
+    return { success: false, message: `Influence Politique insuffisante (${mandat.cost} requis, vous avez ${amf.influence || 0}).` };
+  }
+
+  amf.influence -= mandat.cost;
+  amf.mandats = [...(amf.mandats || []), mandatId];
+  return { success: true, message: `⚖️ Mandat "${mandat.name}" ratifié ! ${mandat.desc}` };
 });
 
 ipcMain.handle('action-marketing', () => {
@@ -1322,6 +1511,10 @@ ipcMain.handle('next-day', () => {
         changePercent *= 3;
       }
       if (changePercent < 0 && hasFlashcrash) changePercent *= 0.5;
+      // AMF : Gel d'Actifs réduit les crashes de 75%
+      if (changePercent < 0 && (gameState.amf?.gelActifsRemaining || 0) > 0) changePercent *= 0.25;
+      // AMF : Supervision Cosmique = 0 crash possible
+      if (changePercent < 0 && (gameState.amf?.mandats || []).includes('m_supervision')) changePercent = Math.abs(changePercent) * 0.1;
     } 
     
     let newPrice = stock.price * (1 + changePercent);
@@ -1333,7 +1526,10 @@ ipcMain.handle('next-day', () => {
 
     // Dividendes HFT
     if (hasHft && gameState.portfolio[sym] > 0) {
-      hftDividends += (stock.price * gameState.portfolio[sym]) * hftRate;
+      let divAmount = (stock.price * gameState.portfolio[sym]) * hftRate;
+      // AMF : Intervention de Marché booste les dividendes de +50%
+      if ((gameState.amf?.interventionRemaining || 0) > 0) divAmount *= 1.5;
+      hftDividends += divAmount;
     }
   }
 
@@ -1491,6 +1687,10 @@ ipcMain.handle('next-day', () => {
   }
   
   if (gameState.money < 0) balanceHtml += "<br/><b style='color:var(--danger)'>⚠️ ATTENTION : Votre banque est à découvert !</b>";
+  
+  // AMF : traitement journalier
+  const amfLog = amfNextDay();
+  if (amfLog) balanceHtml += `<hr style="margin: 6px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);"><span style="font-size:0.9rem; color:#f39c12;">🏛️ AMF${amfLog}</span>`;
   
   return { success: true, message: balanceHtml };
 });

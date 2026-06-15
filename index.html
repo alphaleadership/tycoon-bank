@@ -36,6 +36,7 @@
       <button class="tab-btn" data-tab="tab-settings">Paramètres</button>
       <button class="tab-btn" id="nav-ascension" data-tab="tab-ascension" style="display: none; color: #9b59b6; font-weight: bold; border-color: #9b59b6;">Ascension 🌌</button>
       <button class="tab-btn" id="nav-rebirth" data-tab="tab-rebirth" style="display: none; color: #e74c3c; font-weight: bold; border-color: #e74c3c;">Prestige 🔁</button>
+      <button class="tab-btn" id="nav-amf" data-tab="tab-amf" style="display: none; color: #f39c12; font-weight: bold; border-color: #f39c12; animation: pulse-amf 2s infinite;">AMF 🏛️</button>
     </nav>
     
     <main class="dashboard">
@@ -331,6 +332,60 @@
           <h3 style="margin-bottom: 1rem; color: #ecf0f1;">Améliorations Permanentes</h3>
           <p style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 1rem;">Ces améliorations persistent à travers tous vos rebirths et rendent chaque nouvelle partie plus puissante.</p>
           <div id="rebirth-upgrades-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            <!-- Injecté par renderer.js -->
+          </div>
+
+          <!-- Section AMF -->
+          <div id="amf-unlock-section" style="display:none; margin-top: 2rem; padding: 1.5rem; border: 2px solid #f39c12; border-radius: 12px; background: rgba(243,156,18,0.05); text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏛️</div>
+            <h3 style="color: #f39c12; margin: 0 0 0.5rem;">Autorité des Marchés Financiers</h3>
+            <p style="color: #bdc3c7; font-size: 0.9rem; margin-bottom: 1rem;">Vous avez atteint le 50e rebirth. Vous êtes prêt à réguler les marchés mondiaux.<br/>Ce mode change radicalement le gameplay : devenez le régulateur, pas le joueur.</p>
+            <button id="btn-amf-activate" class="btn" style="padding: 0.8rem 2rem; font-size: 1rem; font-weight: bold; background: rgba(243,156,18,0.2); border: 2px solid #f39c12; color: #f39c12; border-radius: 8px;">
+              🏛️ Activer le Mode AMF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB AMF -->
+      <div id="tab-amf" class="tab-content" style="display: none;">
+        <div class="card glass" style="margin-bottom: 1.5rem; border: 2px solid #f39c12;">
+          <h2 style="color: #f39c12; margin-top: 0;">🏛️ Autorité des Marchés Financiers</h2>
+          <p style="color: #bdc3c7;">Vous êtes le régulateur suprême. Exercez votre pouvoir réglementaire pour controler, punir et modeler l’économie mondiale.</p>
+
+          <!-- Ressources AMF -->
+          <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 1.5rem;">
+            <div class="stat-item">
+              <span class="stat-label">🏛️ Autorité</span>
+              <span class="stat-value" style="color: #f39c12;" id="val-autorite">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">⚖️ Influence Politique</span>
+              <span class="stat-value" style="color: #3498db;" id="val-influence">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">📊 Jour AMF</span>
+              <span class="stat-value" id="val-amf-day">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">💰 Amendes Total</span>
+              <span class="stat-value" style="color: #2ecc71;" id="val-total-fines">€0</span>
+            </div>
+          </div>
+
+          <!-- Statuts actifs -->
+          <div id="amf-status-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; min-height: 32px;"></div>
+
+          <!-- Actions réglementaires -->
+          <h3 style="color: #ecf0f1; margin-bottom: 1rem;">Actions Réglementaires</h3>
+          <div id="amf-actions-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <!-- Injecté par renderer.js -->
+          </div>
+
+          <!-- Mandats réglementaires -->
+          <h3 style="color: #ecf0f1; margin-bottom: 0.5rem;">⚖️ Mandats Réglementaires</h3>
+          <p style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 1rem;">Les mandats sont des effets passifs permanents achetés avec l’Influence Politique.</p>
+          <div id="amf-mandats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
             <!-- Injecté par renderer.js -->
           </div>
         </div>
