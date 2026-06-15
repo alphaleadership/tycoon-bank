@@ -448,6 +448,7 @@ const updateUI = async () => {
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
     updateEndgameTree(state);
     updateRebirthUI(state);
+    updateAmfUI(state);
 
     // Mise à jour des badges de palier
     const erSet = new Set(state.endgameResearches);
@@ -872,4 +873,161 @@ document.getElementById('btn-do-rebirth')?.addEventListener('click', async () =>
   const res = await window.electronAPI.doRebirth();
   addLog(`<b style="color:#e74c3c">${res.message}</b>`);
   updateUI();
+});
+
+// ── AMF SYSTEM ────────────────────────────────────────────────────────────────
+
+const AMF_ACTIONS_DEF = [
+  { id: 'a_amende_std',     name: 'Amende Standard',        icon: '📄', costAuth: 10,  cooldown: 1,  desc: '+5B€ d\'amendes immédiates.' },
+  { id: 'a_enquete',        name: 'Ouvrir une Enquête',      icon: '🔍', costAuth: 50,  cooldown: 7,  desc: '7 jours → +500B€ d\'amendes.' },
+  { id: 'a_gel_actifs',     name: 'Gel d\'Actifs',           icon: '🧊', costAuth: 80,  cooldown: 5,  desc: 'Crashes réduits de 75% pendant 10 jours.' },
+  { id: 'a_revoc_licence',  name: 'Révoquer une Licence',    icon: '🚫', costAuth: 120, cooldown: 14, desc: '+2000B€ + +10 Influence Politique.' },
+  { id: 'a_intervention',   name: 'Intervention de Marché',  icon: '📈', costAuth: 200, cooldown: 10, desc: '+50% dividendes HFT pendant 15 jours.' },
+  { id: 'a_nationalisation', name: 'Nationalisation',         icon: '🏛️', costAuth: 500, cooldown: 30, desc: 'Revenus permanents cumulatifs +0.1%/j.' }
+];
+
+const AMF_MANDATS_DEF = [
+  { id: 'm_transparence', name: 'Mandat Transparence',      icon: '📋', cost: 10,  desc: '+5 Autorité/jour.' },
+  { id: 'm_anti_blanch',  name: 'Anti-Blanchiment',         icon: '🚿', cost: 20,  desc: '+50M€/jour d\'amendes passives.' },
+  { id: 'm_hft_ctrl',     name: 'Contrôle HFT',             icon: '⚡', cost: 35,  desc: 'Toutes les amendes ×2.' },
+  { id: 'm_supervision',  name: 'Supervision Cosmique',     icon: '🔭', cost: 60,  desc: '+20 Autorité/jour. Crashes → baisses minimales.' },
+  { id: 'm_omnireg',      name: 'Régulation Omniverselle',  icon: '👑', cost: 100, desc: '5% de la trésorerie → Autorité/jour.' }
+];
+
+const renderAmfActions = (amf) => {
+  const grid = document.getElementById('amf-actions-grid');
+  if (!grid) return;
+  const cooldowns = amf.cooldowns || {};
+  const autorite = amf.autorite || 0;
+
+  grid.innerHTML = AMF_ACTIONS_DEF.map(a => {
+    const cd = cooldowns[a.id] || 0;
+    const onCd = cd > 0;
+    const canAfford = autorite >= a.costAuth;
+    const disabled = onCd || !canAfford;
+
+    const bgColor = onCd ? 'rgba(127,140,141,0.1)' : canAfford ? 'rgba(243,156,18,0.15)' : 'rgba(192,57,43,0.1)';
+    const borderColor = onCd ? '#7f8c8d' : canAfford ? '#f39c12' : '#e74c3c';
+    const textColor = onCd ? '#7f8c8d' : canAfford ? '#f39c12' : '#e74c3c';
+
+    return `
+      <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 10px; padding: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+          <div style="font-size: 1.3rem;">${a.icon}</div>
+          <span style="font-size: 0.75rem; color: #f39c12; background: rgba(243,156,18,0.15); padding: 0.1rem 0.4rem; border-radius: 4px;">${a.costAuth} 🏛️</span>
+        </div>
+        <div style="font-weight: bold; color: #ecf0f1; margin-bottom: 0.25rem;">${a.name}</div>
+        <div style="font-size: 0.78rem; color: #95a5a6; margin-bottom: 0.75rem;">${a.desc}</div>
+        <button
+          onclick="window.amfDoAction('${a.id}')"
+          style="width: 100%; padding: 0.4rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid ${borderColor}; background: ${bgColor}; color: ${textColor}; cursor: ${disabled ? 'not-allowed' : 'pointer'};"
+          ${disabled ? 'disabled' : ''}>
+          ${onCd ? `⏳ Recharge (${cd}j)` : !canAfford ? '🔒 Autorité insuffisante' : 'Exécuter'}
+        </button>
+      </div>`;
+  }).join('');
+};
+
+const renderAmfMandats = (amf) => {
+  const grid = document.getElementById('amf-mandats-grid');
+  if (!grid) return;
+  const mandats = new Set(amf.mandats || []);
+  const influence = amf.influence || 0;
+
+  grid.innerHTML = AMF_MANDATS_DEF.map(m => {
+    const owned = mandats.has(m.id);
+    const canAfford = influence >= m.cost;
+    const borderColor = owned ? '#27ae60' : canAfford ? '#3498db' : '#7f8c8d';
+    const bgColor = owned ? 'rgba(39,174,96,0.1)' : canAfford ? 'rgba(52,152,219,0.1)' : 'rgba(127,140,141,0.05)';
+
+    return `
+      <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 10px; padding: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 1.3rem;">${m.icon}</span>
+          <div style="font-weight: bold; color: #ecf0f1;">${m.name}</div>
+        </div>
+        <div style="font-size: 0.78rem; color: #95a5a6; margin-bottom: 0.75rem;">${m.desc}</div>
+        <button
+          onclick="window.amfBuyMandat('${m.id}')"
+          style="width: 100%; padding: 0.35rem; font-size: 0.82rem; border-radius: 6px; border: 1px solid ${borderColor}; background: ${bgColor}; color: ${borderColor}; cursor: ${owned || !canAfford ? 'not-allowed' : 'pointer'};"
+          ${owned || !canAfford ? 'disabled' : ''}>
+          ${owned ? '✅ Actif' : `Ratifier (${m.cost} ⚖️)`}
+        </button>
+      </div>`;
+  }).join('');
+};
+
+const updateAmfUI = (state) => {
+  const amf = state.amf;
+  const navAmf = document.getElementById('nav-amf');
+  const unlockSection = document.getElementById('amf-unlock-section');
+  const rb = state.rebirthCount || 0;
+
+  // Afficher le bouton d'activation si 50 rebirths atteints
+  if (rb >= 50 && unlockSection) {
+    unlockSection.style.display = 'block';
+    const btnActivate = document.getElementById('btn-amf-activate');
+    if (btnActivate) {
+      if (amf?.active) {
+        btnActivate.textContent = '✅ Mode AMF actif';
+        btnActivate.disabled = true;
+      }
+    }
+  }
+
+  if (!amf?.active) return;
+
+  // Afficher le tab AMF
+  if (navAmf) navAmf.style.display = 'inline-block';
+
+  // Stats
+  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setEl('val-autorite', formatNumber(amf.autorite || 0));
+  setEl('val-influence', formatNumber(amf.influence || 0));
+  setEl('val-amf-day', formatNumber(amf.amfDay || 0));
+  setEl('val-total-fines', formatMoney(amf.totalFines || 0));
+
+  // Barre de statuts actifs
+  const statusBar = document.getElementById('amf-status-bar');
+  if (statusBar) {
+    const statuses = [];
+    if ((amf.gelActifsRemaining || 0) > 0) statuses.push(`🧊 Gel d'Actifs (${amf.gelActifsRemaining}j)`);
+    if ((amf.interventionRemaining || 0) > 0) statuses.push(`📈 Intervention Marché (${amf.interventionRemaining}j)`);
+    if ((amf.enqueteRemaining || 0) > 0) statuses.push(`🔍 Enquête en cours (${amf.enqueteRemaining}j)`);
+    if ((amf.nationalisations || 0) > 0) statuses.push(`🏛️ ${amf.nationalisations} nationalisation(s)`);
+    statusBar.innerHTML = statuses.map(s =>
+      `<span style="padding: 0.25rem 0.6rem; background: rgba(243,156,18,0.15); border: 1px solid rgba(243,156,18,0.4); border-radius: 20px; font-size: 0.8rem; color: #f39c12;">${s}</span>`
+    ).join('');
+  }
+
+  renderAmfActions(amf);
+  renderAmfMandats(amf);
+};
+
+// Fonctions globales pour boutons onclick
+window.amfDoAction = async (id) => {
+  const res = await window.electronAPI.amfAction(id);
+  addLog(`<span style="color:#f39c12">${res.message}</span>`);
+  updateUI();
+};
+window.amfBuyMandat = async (id) => {
+  const res = await window.electronAPI.amfBuyMandat(id);
+  addLog(`<span style="color:#3498db">${res.message}</span>`);
+  updateUI();
+};
+
+// Bouton activation AMF
+document.getElementById('btn-amf-activate')?.addEventListener('click', async () => {
+  const res = await window.electronAPI.amfActivate();
+  addLog(`<b style="color:#f39c12">${res.message}</b>`);
+  updateUI();
+  // Naviguer vers le tab AMF
+  if (res.success) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    const navAmf = document.getElementById('nav-amf');
+    if (navAmf) { navAmf.classList.add('active'); navAmf.style.display = 'inline-block'; }
+    const tabAmf = document.getElementById('tab-amf');
+    if (tabAmf) tabAmf.style.display = 'block';
+  }
 });
