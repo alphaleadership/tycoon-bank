@@ -285,13 +285,82 @@ const RANDOM_EVENTS = [
 ];
 
 const ENDGAME_RESEARCH_TREE = {
-  'e_base': { id: 'e_base', name: 'Ascension Quantique', cost: 1, desc: 'Lier la banque au multivers. Débloque le véritable potentiel.', req: [] },
-  'e_marketing': { id: 'e_marketing', name: 'Marketing Multiversel', cost: 5, desc: 'Attire des clients issus d\'autres dimensions (+10 Millions de clients)', req: ['e_base'] },
-  'e_finance': { id: 'e_finance', name: 'Singularité Financière', cost: 10, desc: 'Taux d\'intérêt absolu: Revenus des prêts multipliés par 10', req: ['e_base'] },
-  'e_tech': { id: 'e_tech', name: 'IA Divine', cost: 20, desc: 'Une IA transcendante gère les marchés. Dividendes x100', req: ['e_finance', 'e_marketing'] },
-  'e_dm': { id: 'e_dm', name: 'Condensateur Stellaire', cost: 50, desc: 'Produit automatiquement 1 Matière Noire (DM) par jour.', req: ['e_tech'] },
-  'e_auto_dm': { id: 'e_auto_dm', name: 'Extraction Parallèle', cost: 100, desc: 'L\'extraction de DM est doublée (2 DM / jour)', req: ['e_dm'] }
+  // ── PALIER I : Ascension Quantique ─────────────────────────────────────────
+  'e_base': { id: 'e_base', name: 'Ascension Quantique', cost: 1, desc: 'Lier la banque au multivers. Débloque le véritable potentiel.', req: [], tier: 1 },
+  'e_marketing': { id: 'e_marketing', name: 'Marketing Multiversel', cost: 5, desc: 'Attire des clients issus d\'autres dimensions (+10 Millions de clients)', req: ['e_base'], tier: 1 },
+  'e_finance': { id: 'e_finance', name: 'Singularité Financière', cost: 10, desc: 'Revenus des prêts ×10', req: ['e_base'], tier: 1 },
+  'e_tech': { id: 'e_tech', name: 'IA Divine', cost: 20, desc: 'Dividendes HFT ×100. Chercheurs ×10 RP', req: ['e_finance', 'e_marketing'], tier: 1 },
+  'e_dm': { id: 'e_dm', name: 'Condensateur Stellaire', cost: 50, desc: 'Produit automatiquement 1 Matière Noire (DM) par jour.', req: ['e_tech'], tier: 1 },
+  'e_auto_dm': { id: 'e_auto_dm', name: 'Extraction Parallèle', cost: 100, desc: 'L\'extraction de DM est doublée (2 DM / jour)', req: ['e_dm'], tier: 1 },
+
+  // ── PALIER II : Dominance Cosmique ─────────────────────────────────────────
+  'e2_empire': { id: 'e2_empire', name: 'Empire Bancaire Cosmique', cost: 150, desc: 'Les frais de tenue de compte sont triplés (×3).', req: ['e_auto_dm'], tier: 2 },
+  'e2_workforce': { id: 'e2_workforce', name: 'Automatisation Totale', cost: 200, desc: 'L\'automatisation réduit la masse salariale de 90% (salaires ÷10).', req: ['e2_empire'], tier: 2 },
+  'e2_blackhole': { id: 'e2_blackhole', name: 'Singularité Gravitationnelle', cost: 300, desc: 'Un trou noir génère +5 DM supplémentaires par jour.', req: ['e2_empire'], tier: 2 },
+  'e2_omniloan': { id: 'e2_omniloan', name: 'Prêts Omniversels', cost: 350, desc: 'Revenus des prêts portés à ×100 (remplace la Singularité Financière ×10).', req: ['e2_workforce'], tier: 2 },
+  'e2_apex': { id: 'e2_apex', name: 'Attraction Gravitationnelle', cost: 500, desc: 'Votre réputation cosmique attire +1 000 clients passifs chaque jour.', req: ['e2_omniloan', 'e2_blackhole'], tier: 2 },
+
+  // ── PALIER III : Transcendance ──────────────────────────────────────────────
+  'e3_godbank': { id: 'e3_godbank', name: 'Banque des Dieux', cost: 1000, desc: 'Génère un revenu passif divin de 1 Quadrillion € par jour.', req: ['e2_apex'], tier: 3 },
+  'e3_timewarp': { id: 'e3_timewarp', name: 'Distorsion Temporelle', cost: 2000, desc: 'Chaque jour vaut double : tous les revenus journaliers sont ×2.', req: ['e3_godbank'], tier: 3 },
+  'e3_singularity': { id: 'e3_singularity', name: 'Singularité Client', cost: 3000, desc: 'Vos clients sont liés à vous pour l\'éternité : aucune fuite possible.', req: ['e3_godbank'], tier: 3 },
+  'e3_omniscience': { id: 'e3_omniscience', name: 'Omniscience Financière', cost: 5000, desc: 'Votre banque transcende le temps et l\'espace. Score de prestige ultime.', req: ['e3_timewarp', 'e3_singularity'], tier: 3 }
 };
+
+// ── SYSTÈME DE REBIRTH ───────────────────────────────────────────────────────
+const REBIRTH_UPGRADES = {
+  'rb_money': {
+    id: 'rb_money', name: 'Héritage Capital', icon: '💰',
+    desc: 'Démarrez avec 10× plus d\'argent par niveau.',
+    effect: (lvl) => `Début : ${formatNumber(100000 * Math.pow(10, lvl))} €`,
+    costPerLevel: (lvl) => lvl + 1,
+    maxLevel: 8
+  },
+  'rb_clients': {
+    id: 'rb_clients', name: 'Réseau Fidèle', icon: '👥',
+    desc: 'Démarrez avec +200 clients par niveau.',
+    effect: (lvl) => `+${lvl * 200} clients au départ`,
+    costPerLevel: (lvl) => lvl + 1,
+    maxLevel: 10
+  },
+  'rb_rp_speed': {
+    id: 'rb_rp_speed', name: 'Mémoire Scientifique', icon: '🔬',
+    desc: 'Les chercheurs produisent +1 RP par niveau.',
+    effect: (lvl) => `+${lvl} RP/chercheur/jour`,
+    costPerLevel: (lvl) => (lvl + 1) * 2,
+    maxLevel: 10
+  },
+  'rb_income': {
+    id: 'rb_income', name: 'Multiplicateur Karmique', icon: '✨',
+    desc: 'Tous les revenus journaliers ×(1 + 0.25×niveau).',
+    effect: (lvl) => `Revenus ×${(1 + lvl * 0.25).toFixed(2)}`,
+    costPerLevel: (lvl) => (lvl + 1) * 3,
+    maxLevel: 8
+  },
+  'rb_salary': {
+    id: 'rb_salary', name: 'Syndicats Démantelés', icon: '🏢',
+    desc: 'Salaires réduits de 5% supplémentaires par niveau.',
+    effect: (lvl) => `-${lvl * 5}% de masse salariale`,
+    costPerLevel: (lvl) => (lvl + 1) * 2,
+    maxLevel: 10
+  },
+  'rb_dm': {
+    id: 'rb_dm', name: 'Noyau de Matière Noire', icon: '⚫',
+    desc: 'Démarrez chaque rebirth avec +1 DM par niveau.',
+    effect: (lvl) => `+${lvl} DM au départ`,
+    costPerLevel: (lvl) => (lvl + 1) * 5,
+    maxLevel: 5
+  }
+};
+
+const calcRebirthEP = (state) => {
+  const erCount = (state.endgameResearches || []).length;
+  const dm = state.darkMatter || 0;
+  const rb = state.rebirthCount || 0;
+  return Math.max(1, 1 + rb + Math.floor(dm / 50) + erCount * 2);
+};
+
+const getRbUpgLevel = (id) => (gameState.rebirthUpgrades || {})[id] || 0;
 
 let gameState = {
   day: 1,
@@ -317,7 +386,11 @@ let gameState = {
   researchTree: RESEARCH_TREE,
   endgameTree: ENDGAME_RESEARCH_TREE,
   stocks: JSON.parse(JSON.stringify(STOCKS)),
-  portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
+  portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+  // ── Rebirth ──
+  rebirthCount: 0,
+  prestigePoints: 0,
+  rebirthUpgrades: {}
 };
 
 let currentSlot = '1';
@@ -408,9 +481,105 @@ ipcMain.handle('hard-reset', () => {
     researchTree: JSON.parse(JSON.stringify(RESEARCH_TREE)),
     endgameTree: JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE)),
     stocks: JSON.parse(JSON.stringify(STOCKS)),
-    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {})
+    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+    rebirthCount: 0,
+    prestigePoints: 0,
+    rebirthUpgrades: {}
   };
   return { success: true, message: "La partie a été réinitialisée de zéro !" };
+});
+
+// ── REBIRTH HANDLERS ─────────────────────────────────────────────────────
+ipcMain.handle('rebirth-preview', () => {
+  const canRebirth = gameState.endgameResearches.includes('e3_omniscience');
+  const epGain = calcRebirthEP(gameState);
+  return { canRebirth, epGain, currentEP: gameState.prestigePoints || 0, rebirthCount: gameState.rebirthCount || 0 };
+});
+
+ipcMain.handle('do-rebirth', () => {
+  if (!gameState.endgameResearches.includes('e3_omniscience')) {
+    return { success: false, message: "Vous devez débloquer l'Omniscience Financière (Palier III) pour effectuer un Rebirth." };
+  }
+
+  const epGain = calcRebirthEP(gameState);
+  const prevRb = gameState.rebirthCount || 0;
+  const prevEP = gameState.prestigePoints || 0;
+  const prevUpgrades = { ...(gameState.rebirthUpgrades || {}) };
+
+  // Appliquer les bonus des upgrades au nouvel état de départ
+  const rbMoney = getRbUpgLevel('rb_money');
+  const rbClients = getRbUpgLevel('rb_clients');
+  const rbDm = getRbUpgLevel('rb_dm');
+  const rbRp = getRbUpgLevel('rb_rp_speed');
+
+  const startMoney = 100000 * Math.pow(10, rbMoney);
+  const startClients = 10 + rbClients * 200;
+  const startDM = rbDm;
+  const startRP = rbRp * 5; // 5 RP de bonus par niveau de mémoire scientifique
+
+  gameState = {
+    day: 1,
+    money: startMoney,
+    clients: startClients,
+    employees: 2,
+    hrManagers: 0,
+    researchers: 0,
+    traders: 0,
+    marketers: 0,
+    researchPoints: startRP,
+    loansOut: 0,
+    interestRate: 0.05,
+    centralBankRate: 0.03,
+    marketingLevel: 1,
+    autoLoanEnabled: true,
+    autoConsumeRPEnabled: true,
+    megaMarketing: 0,
+    megaLobbying: 0,
+    darkMatter: startDM,
+    endgameResearches: [],
+    unlockedResearches: [],
+    researchTree: RESEARCH_TREE,
+    endgameTree: ENDGAME_RESEARCH_TREE,
+    stocks: JSON.parse(JSON.stringify(STOCKS)),
+    portfolio: Object.keys(STOCKS).reduce((acc, key) => { acc[key] = 0; return acc; }, {}),
+    rebirthCount: prevRb + 1,
+    prestigePoints: prevEP + epGain,
+    rebirthUpgrades: prevUpgrades
+  };
+
+  return {
+    success: true,
+    message: `🔁 Rebirth #${prevRb + 1} effectué ! +${epGain} Éclats de Prestige (Total : ${prevEP + epGain} EP). Bonne chance pour cette nouvelle vie !`
+  };
+});
+
+ipcMain.handle('buy-rebirth-upgrade', (event, id) => {
+  const upg = REBIRTH_UPGRADES[id];
+  if (!upg) return { success: false, message: "Amélioration introuvable." };
+
+  if (!gameState.rebirthUpgrades) gameState.rebirthUpgrades = {};
+  const currentLvl = gameState.rebirthUpgrades[id] || 0;
+
+  if (currentLvl >= upg.maxLevel) {
+    return { success: false, message: `${upg.name} est au niveau maximum (${upg.maxLevel}).` };
+  }
+
+  const cost = upg.costPerLevel(currentLvl);
+  const ep = gameState.prestigePoints || 0;
+
+  if (ep < cost) {
+    return { success: false, message: `EP insuffisants. Il vous faut ${cost} EP (vous avez ${ep} EP).` };
+  }
+
+  gameState.prestigePoints -= cost;
+  gameState.rebirthUpgrades[id] = currentLvl + 1;
+
+  return {
+    success: true,
+    message: `✨ ${upg.name} amélioré au niveau ${currentLvl + 1} ! (-${cost} EP)`,
+    newLevel: currentLvl + 1,
+    effect: upg.effect(currentLvl + 1)
+  };
 });
 
 ipcMain.handle('open-sponsor', () => {
@@ -827,11 +996,15 @@ ipcMain.handle('unlock-endgame-research', (event, id) => {
     gameState.endgameResearches.push(id);
     
     // Effets immédiats
-    if (id === 'e_marketing') {
-      gameState.clients += 10000000;
+    if (id === 'e_marketing') gameState.clients += 10000000;
+    if (id === 'e2_apex') gameState.clients += 5000000; // Bonus immédiat +5M clients
+    if (id === 'e3_omniscience') {
+      // Prestige ultime : bonus massif de DM
+      gameState.darkMatter = (gameState.darkMatter || 0) + 10000;
     }
-    
-    return { success: true, message: `Ascension : ${r.name} débloquée !` };
+
+    const tierLabel = r.tier === 3 ? '🌟🌟🌟' : r.tier === 2 ? '🌟🌟' : '🌟';
+    return { success: true, message: `${tierLabel} Ascension Palier ${r.tier} : ${r.name} débloquée !` };
   }
   return { success: false, message: "Matière Noire (DM) insuffisante." };
 });
@@ -873,6 +1046,9 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_tax_evasion')) salaries *= 0.8;
   if (ur.has('r_offshore')) salaries *= 0.9;
   if (ur.has('r_tax_haven')) salaries *= 0.85;
+  if (er.has('e2_workforce')) salaries *= 0.1; // Palier II : Automatisation Totale (÷10)
+  const rbSalaryLvl = getRbUpgLevel('rb_salary');
+  if (rbSalaryLvl > 0) salaries *= (1 - rbSalaryLvl * 0.05); // Rebirth : Syndicats Démantelés
   gameState.money -= salaries;
   
   // Frais de tenue de compte
@@ -882,10 +1058,13 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_blockchain')) feePerClient += 3;
   if (ur.has('r_moon')) feePerClient += 10;
   if (ur.has('r_mars')) feePerClient += 20;
+  if (er.has('e2_empire')) feePerClient *= 3; // Palier II : Empire Bancaire Cosmique (×3)
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
-  const interestIncome = gameState.loansOut * gameState.interestRate * (er.has('e_finance') ? 10 : 1);
+  // Palier II e2_omniloan remplace e_finance (×100 au lieu de ×10)
+  const loanMultiplier = er.has('e2_omniloan') ? 100 : (er.has('e_finance') ? 10 : 1);
+  const interestIncome = gameState.loansOut * gameState.interestRate * loanMultiplier;
   gameState.money += interestIncome;
   
   const principalRepayment = gameState.loansOut * 0.1;
@@ -899,6 +1078,7 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_gamification')) newClients += 5;
   if (ur.has('r_global_expansion')) newClients += 20;
   if (ur.has('r_sponsor_esport')) newClients += 10;
+  if (er.has('e2_apex')) newClients += 1000; // Palier II : Attraction Gravitationnelle
   
   let cbMessage = "";
   // Central Bank adjusts rates occasionally
@@ -933,6 +1113,7 @@ ipcMain.handle('next-day', () => {
     if (ur.has('r_loyalty')) lost = Math.floor(lost * 0.8);
     if (ur.has('r_monopoly')) lost = Math.floor(lost * 0.5);
     if (ur.has('r_mindcontrol')) lost = 0;
+    if (er.has('e3_singularity')) lost = 0; // Palier III : Singularité Client
     gameState.clients -= lost;
     cbMessage += ` Taux trop élevés : -${lost} clients.`;
   } else if (rateDiff <= 0.001) {
@@ -1111,6 +1292,8 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_datamining')) rpPerResearcher += 1;
   if (ur.has('r_neural_link')) rpPerResearcher += 5;
   if (er.has('e_tech')) rpPerResearcher *= 10;
+  const rbRpLvl = getRbUpgLevel('rb_rp_speed');
+  if (rbRpLvl > 0) rpPerResearcher += rbRpLvl; // Rebirth : Mémoire Scientifique
   
   gameState.researchPoints += gameState.researchers * rpPerResearcher;
   if (ur.has('r_university')) gameState.researchPoints += 5;
@@ -1163,6 +1346,7 @@ ipcMain.handle('next-day', () => {
   // Génération de Matière Noire Automatique
   if (er.has('e_dm')) {
     let dmGain = er.has('e_auto_dm') ? 2 : 1;
+    if (er.has('e2_blackhole')) dmGain += 5; // Palier II : Singularité Gravitationnelle
     gameState.darkMatter = (gameState.darkMatter || 0) + dmGain;
   }
 
@@ -1227,6 +1411,18 @@ ipcMain.handle('next-day', () => {
   let profitBonus = 0;
   let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
   let consumedRP = 0;
+
+  // Palier III : Revenu divin fixe (+1 Qa €/jour)
+  if (er.has('e3_godbank')) {
+    gameState.money += 1e15;
+    totalGrossIncome += 1e15;
+  }
+
+  // Palier III : Distorsion Temporelle (revenus ×2)
+  if (er.has('e3_timewarp')) {
+    gameState.money += totalGrossIncome; // Double les revenus en ajoutant une copie
+    totalGrossIncome *= 2;
+  }
   
   if (allDone && gameState.researchPoints > 0 && gameState.autoConsumeRPEnabled !== false) {
     let multiplier = Math.log2(1 + gameState.researchPoints) * 0.05; // Échelle logarithmique pour éviter l'explosion
@@ -1237,6 +1433,14 @@ ipcMain.handle('next-day', () => {
   }
   
   // Hard cap pour éviter le dépassement (Infinity)
+  // Rebirth : Multiplicateur Karmique appliqué sur le revenu brut
+  const rbIncomeLvl = getRbUpgLevel('rb_income');
+  if (rbIncomeLvl > 0) {
+    const karmicBonus = totalGrossIncome * rbIncomeLvl * 0.25;
+    gameState.money += karmicBonus;
+    totalGrossIncome += karmicBonus;
+  }
+
   if (gameState.money > 1e66) gameState.money = 1e66;
   if (gameState.clients > 1e66) gameState.clients = 1e66;
 

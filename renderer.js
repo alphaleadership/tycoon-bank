@@ -193,8 +193,17 @@ const updateEndgameTree = (state) => {
     let nodes = [];
     
     for (const [id, r] of Object.entries(state.endgameTree)) {
-      let icon = '🌌';
-      nodes.push({ id: id, label: icon + ' ' + r.name + '\n' + formatNumber(r.cost) + ' DM', title: r.desc });
+      // Icône et couleur initiale par palier
+      const tier = r.tier || 1;
+      const icon = tier === 3 ? '👑' : tier === 2 ? '⚫' : '🌌';
+      const initBg = tier === 3 ? '#7d6608' : tier === 2 ? '#0e6655' : '#34495e';
+      const initBorder = tier === 3 ? '#d4ac0d' : tier === 2 ? '#1abc9c' : '#9b59b6';
+      nodes.push({
+        id: id,
+        label: icon + ' ' + r.name + '\n' + formatNumber(r.cost) + ' DM',
+        title: r.desc,
+        color: { background: initBg, border: initBorder }
+      });
       for (const req of r.req) {
         edges.push({ from: req, to: id, arrows: 'to' });
       }
@@ -221,26 +230,38 @@ const updateEndgameTree = (state) => {
   }
   
   const updates = [];
+  const erSet = new Set(state.endgameResearches);
   for (const [id, r] of Object.entries(state.endgameTree)) {
-    const isUnlocked = state.endgameResearches.includes(id);
-    const hasReq = r.req.every(reqId => state.endgameResearches.includes(reqId));
+    const isUnlocked = erSet.has(id);
+    const hasReq = r.req.every(reqId => erSet.has(reqId));
+    const tier = r.tier || 1;
     
-    let background = '#34495e'; // default
-    let border = '#2c3e50';
-    let titleStr = r.desc;
+    // Palette par palier : I = violet, II = cyan/teal, III = or
+    const palettes = {
+      1: { locked: '#34495e', lockBorder: '#2c3e50', avail: '#8e44ad', availBorder: '#9b59b6', done: '#6c3483', doneBorder: '#9b59b6', noFund: '#c0392b', noFundBorder: '#e74c3c' },
+      2: { locked: '#0e4d43', lockBorder: '#0e6655', avail: '#148f77', availBorder: '#1abc9c', done: '#0e6655', doneBorder: '#1abc9c', noFund: '#922b21', noFundBorder: '#e74c3c' },
+      3: { locked: '#4d3b00', lockBorder: '#7d6608', avail: '#b7950b', availBorder: '#d4ac0d', done: '#7d6608', doneBorder: '#f1c40f', noFund: '#922b21', noFundBorder: '#e74c3c' }
+    };
+    const p = palettes[tier];
+    
+    let background, border;
+    let titleStr = r.desc + `\n[Palier ${tier}]`;
     
     if (isUnlocked) {
-      background = '#8e44ad'; border = '#9b59b6';
-      titleStr += '\nStatus: Débloqué';
+      background = p.done; border = p.doneBorder;
+      titleStr += '\n✅ Débloqué';
     } else if (hasReq && state.darkMatter >= r.cost) {
-      background = '#9b59b6'; border = '#8e44ad';
-      titleStr += '\nStatus: Disponible (Double-cliquez)';
+      background = p.avail; border = p.availBorder;
+      titleStr += '\n▶ Disponible (Double-cliquez)';
     } else if (hasReq) {
-      background = '#c0392b'; border = '#e74c3c';
-      titleStr += '\nStatus: Fonds insuffisants';
+      background = p.noFund; border = p.noFundBorder;
+      titleStr += `\n🔒 DM insuffisante (${formatNumber(r.cost)} DM requis)`;
+    } else {
+      background = p.locked; border = p.lockBorder;
+      titleStr += '\n🔒 Prérequis manquants';
     }
     
-    updates.push({ id: id, color: { background: background, border: border, highlight: { background: background, border: '#ecf0f1' } }, title: titleStr });
+    updates.push({ id: id, color: { background, border, highlight: { background, border: '#ecf0f1' } }, title: titleStr });
   }
   endgameNodes.update(updates);
 };
@@ -426,6 +447,29 @@ const updateUI = async () => {
     
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
     updateEndgameTree(state);
+    updateRebirthUI(state);
+
+    // Mise à jour des badges de palier
+    const erSet = new Set(state.endgameResearches);
+    const tier1Keys = ['e_base','e_marketing','e_finance','e_tech','e_dm','e_auto_dm'];
+    const tier2Keys = ['e2_empire','e2_workforce','e2_blackhole','e2_omniloan','e2_apex'];
+    const tier3Keys = ['e3_godbank','e3_timewarp','e3_singularity','e3_omniscience'];
+
+    const countDone = (keys) => keys.filter(k => erSet.has(k)).length;
+    const t1Done = countDone(tier1Keys), t2Done = countDone(tier2Keys), t3Done = countDone(tier3Keys);
+
+    const t1El = document.getElementById('tier1-status');
+    const t2El = document.getElementById('tier2-status');
+    const t3El = document.getElementById('tier3-status');
+    const t2Badge = document.getElementById('tier2-badge');
+    const t3Badge = document.getElementById('tier3-badge');
+
+    if (t1El) t1El.textContent = t1Done === tier1Keys.length ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;
+    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : t1Done === tier1Keys.length ? `${t2Done}/${tier2Keys.length} recherches` : 'Nécessite Palier I complet';
+    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : t2Done === tier2Keys.length ? `${t3Done}/${tier3Keys.length} recherches` : 'Nécessite Palier II complet';
+
+    if (t2Badge) t2Badge.style.opacity = t1Done === tier1Keys.length ? '1' : '0.5';
+    if (t3Badge) t3Badge.style.opacity = t2Done === tier2Keys.length ? '1' : '0.5';
   } else if (document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'none';
     if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'none';
@@ -708,4 +752,124 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const target = document.getElementById(btn.getAttribute('data-tab'));
     if (target) target.style.display = 'block';
   });
+});
+
+// ── REBIRTH SYSTEM ────────────────────────────────────────────────────────────
+
+const REBIRTH_UPGRADES_DEF = [
+  { id: 'rb_money',    name: 'Héritage Capital',      icon: '💰', desc: 'Démarre avec 10× plus d\'argent par niveau.', maxLevel: 8 },
+  { id: 'rb_clients',  name: 'Réseau Fidèle',          icon: '👥', desc: '+200 clients au départ par niveau.',           maxLevel: 10 },
+  { id: 'rb_rp_speed', name: 'Mémoire Scientifique',   icon: '🔬', desc: '+1 RP/chercheur/jour par niveau.',             maxLevel: 10 },
+  { id: 'rb_income',   name: 'Multiplicateur Karmique', icon: '✨', desc: 'Revenus journaliers ×(1+0.25×niv).',          maxLevel: 8 },
+  { id: 'rb_salary',   name: 'Syndicats Démantelés',    icon: '🏢', desc: '-5% de masse salariale par niveau.',           maxLevel: 10 },
+  { id: 'rb_dm',       name: 'Noyau de Matière Noire',  icon: '⚫', desc: '+1 DM au départ par niveau.',                  maxLevel: 5 }
+];
+
+// Coûts (doivent correspondre à REBIRTH_UPGRADES dans main.js)
+const rbCostFn = {
+  rb_money:    (lvl) => lvl + 1,
+  rb_clients:  (lvl) => lvl + 1,
+  rb_rp_speed: (lvl) => (lvl + 1) * 2,
+  rb_income:   (lvl) => (lvl + 1) * 3,
+  rb_salary:   (lvl) => (lvl + 1) * 2,
+  rb_dm:       (lvl) => (lvl + 1) * 5
+};
+
+const renderRebirthUpgrades = (state) => {
+  const grid = document.getElementById('rebirth-upgrades-grid');
+  if (!grid) return;
+  const upgrades = state.rebirthUpgrades || {};
+
+  grid.innerHTML = REBIRTH_UPGRADES_DEF.map(upg => {
+    const lvl = upgrades[upg.id] || 0;
+    const isMax = lvl >= upg.maxLevel;
+    const cost = isMax ? '–' : rbCostFn[upg.id](lvl);
+    const ep = state.prestigePoints || 0;
+    const canAfford = !isMax && ep >= rbCostFn[upg.id](lvl);
+
+    const progress = (lvl / upg.maxLevel) * 100;
+    const btnStyle = isMax
+      ? 'background: rgba(39,174,96,0.2); border-color: #27ae60; color: #27ae60; cursor: default;'
+      : canAfford
+        ? 'background: rgba(231,76,60,0.2); border-color: #e74c3c; color: #e74c3c; cursor: pointer;'
+        : 'background: rgba(127,140,141,0.1); border-color: #7f8c8d; color: #7f8c8d; cursor: not-allowed;';
+
+    return `
+      <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 1.4rem;">${upg.icon}</span>
+          <div>
+            <div style="font-weight: bold; color: #ecf0f1; font-size: 0.95rem;">${upg.name}</div>
+            <div style="font-size: 0.75rem; color: #95a5a6;">${upg.desc}</div>
+          </div>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 6px; margin: 0.5rem 0;">
+          <div style="background: #e74c3c; width: ${progress}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+          <span style="font-size: 0.8rem; color: #bdc3c7;">Niv. <strong>${lvl}</strong> / ${upg.maxLevel}</span>
+          <button
+            onclick="window.buyRebirthUpgrade('${upg.id}')"
+            style="padding: 0.3rem 0.75rem; font-size: 0.8rem; border-radius: 6px; border: 1px solid; ${btnStyle}"
+            ${isMax || !canAfford ? 'disabled' : ''}>
+            ${isMax ? '✅ MAX' : `Améliorer (${cost} EP)`}
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+};
+
+const updateRebirthUI = async (state) => {
+  const navRebirth = document.getElementById('nav-rebirth');
+
+  // Afficher l'onglet dès qu'on a fait au moins 1 rebirth ou qu'on peut en faire
+  const erSet = new Set(state.endgameResearches || []);
+  const canRebirth = erSet.has('e3_omniscience');
+  const hasRebirthed = (state.rebirthCount || 0) > 0;
+
+  if ((canRebirth || hasRebirthed) && navRebirth) {
+    navRebirth.style.display = 'inline-block';
+  }
+
+  if (document.getElementById('val-ep')) {
+    document.getElementById('val-ep').textContent = formatNumber(state.prestigePoints || 0);
+  }
+  if (document.getElementById('val-rebirth-count')) {
+    document.getElementById('val-rebirth-count').textContent = formatNumber(state.rebirthCount || 0);
+  }
+
+  const previewEl = document.getElementById('val-ep-preview');
+  const btnRebirth = document.getElementById('btn-do-rebirth');
+  const lockMsg = document.getElementById('rebirth-lock-msg');
+
+  if (canRebirth) {
+    const preview = await window.electronAPI.rebirthPreview();
+    if (previewEl) previewEl.textContent = `+${formatNumber(preview.epGain)} EP`;
+    if (btnRebirth) btnRebirth.disabled = false;
+    if (lockMsg) lockMsg.textContent = '✅ Prêt pour le Rebirth !';
+    if (lockMsg) lockMsg.style.color = '#2ecc71';
+  } else {
+    if (previewEl) previewEl.textContent = '–';
+    if (btnRebirth) btnRebirth.disabled = true;
+    if (lockMsg) lockMsg.textContent = 'Nécessite : Omniscience Financière (Palier III)';
+    if (lockMsg) lockMsg.style.color = '#7f8c8d';
+  }
+
+  renderRebirthUpgrades(state);
+};
+
+// Binding global pour les boutons onclick injectés
+window.buyRebirthUpgrade = async (id) => {
+  const res = await window.electronAPI.buyRebirthUpgrade(id);
+  addLog(res.message);
+  updateUI();
+};
+
+// Bouton Rebirth
+document.getElementById('btn-do-rebirth')?.addEventListener('click', async () => {
+  const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir effectuer un Rebirth ?\n\nToute votre progression (argent, clients, recherches, ascension) sera réinitialisée.\nSeuls vos Éclats de Prestige et améliorations permanentes seront conservés.');
+  if (!confirmed) return;
+  const res = await window.electronAPI.doRebirth();
+  addLog(`<b style="color:#e74c3c">${res.message}</b>`);
+  updateUI();
 });
