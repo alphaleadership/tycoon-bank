@@ -285,12 +285,26 @@ const RANDOM_EVENTS = [
 ];
 
 const ENDGAME_RESEARCH_TREE = {
-  'e_base': { id: 'e_base', name: 'Ascension Quantique', cost: 1, desc: 'Lier la banque au multivers. Débloque le véritable potentiel.', req: [] },
-  'e_marketing': { id: 'e_marketing', name: 'Marketing Multiversel', cost: 5, desc: 'Attire des clients issus d\'autres dimensions (+10 Millions de clients)', req: ['e_base'] },
-  'e_finance': { id: 'e_finance', name: 'Singularité Financière', cost: 10, desc: 'Taux d\'intérêt absolu: Revenus des prêts multipliés par 10', req: ['e_base'] },
-  'e_tech': { id: 'e_tech', name: 'IA Divine', cost: 20, desc: 'Une IA transcendante gère les marchés. Dividendes x100', req: ['e_finance', 'e_marketing'] },
-  'e_dm': { id: 'e_dm', name: 'Condensateur Stellaire', cost: 50, desc: 'Produit automatiquement 1 Matière Noire (DM) par jour.', req: ['e_tech'] },
-  'e_auto_dm': { id: 'e_auto_dm', name: 'Extraction Parallèle', cost: 100, desc: 'L\'extraction de DM est doublée (2 DM / jour)', req: ['e_dm'] }
+  // ── PALIER I : Ascension Quantique ─────────────────────────────────────────
+  'e_base': { id: 'e_base', name: 'Ascension Quantique', cost: 1, desc: 'Lier la banque au multivers. Débloque le véritable potentiel.', req: [], tier: 1 },
+  'e_marketing': { id: 'e_marketing', name: 'Marketing Multiversel', cost: 5, desc: 'Attire des clients issus d\'autres dimensions (+10 Millions de clients)', req: ['e_base'], tier: 1 },
+  'e_finance': { id: 'e_finance', name: 'Singularité Financière', cost: 10, desc: 'Revenus des prêts ×10', req: ['e_base'], tier: 1 },
+  'e_tech': { id: 'e_tech', name: 'IA Divine', cost: 20, desc: 'Dividendes HFT ×100. Chercheurs ×10 RP', req: ['e_finance', 'e_marketing'], tier: 1 },
+  'e_dm': { id: 'e_dm', name: 'Condensateur Stellaire', cost: 50, desc: 'Produit automatiquement 1 Matière Noire (DM) par jour.', req: ['e_tech'], tier: 1 },
+  'e_auto_dm': { id: 'e_auto_dm', name: 'Extraction Parallèle', cost: 100, desc: 'L\'extraction de DM est doublée (2 DM / jour)', req: ['e_dm'], tier: 1 },
+
+  // ── PALIER II : Dominance Cosmique ─────────────────────────────────────────
+  'e2_empire': { id: 'e2_empire', name: 'Empire Bancaire Cosmique', cost: 150, desc: 'Les frais de tenue de compte sont triplés (×3).', req: ['e_auto_dm'], tier: 2 },
+  'e2_workforce': { id: 'e2_workforce', name: 'Automatisation Totale', cost: 200, desc: 'L\'automatisation réduit la masse salariale de 90% (salaires ÷10).', req: ['e2_empire'], tier: 2 },
+  'e2_blackhole': { id: 'e2_blackhole', name: 'Singularité Gravitationnelle', cost: 300, desc: 'Un trou noir génère +5 DM supplémentaires par jour.', req: ['e2_empire'], tier: 2 },
+  'e2_omniloan': { id: 'e2_omniloan', name: 'Prêts Omniversels', cost: 350, desc: 'Revenus des prêts portés à ×100 (remplace la Singularité Financière ×10).', req: ['e2_workforce'], tier: 2 },
+  'e2_apex': { id: 'e2_apex', name: 'Attraction Gravitationnelle', cost: 500, desc: 'Votre réputation cosmique attire +1 000 clients passifs chaque jour.', req: ['e2_omniloan', 'e2_blackhole'], tier: 2 },
+
+  // ── PALIER III : Transcendance ──────────────────────────────────────────────
+  'e3_godbank': { id: 'e3_godbank', name: 'Banque des Dieux', cost: 1000, desc: 'Génère un revenu passif divin de 1 Quadrillion € par jour.', req: ['e2_apex'], tier: 3 },
+  'e3_timewarp': { id: 'e3_timewarp', name: 'Distorsion Temporelle', cost: 2000, desc: 'Chaque jour vaut double : tous les revenus journaliers sont ×2.', req: ['e3_godbank'], tier: 3 },
+  'e3_singularity': { id: 'e3_singularity', name: 'Singularité Client', cost: 3000, desc: 'Vos clients sont liés à vous pour l\'éternité : aucune fuite possible.', req: ['e3_godbank'], tier: 3 },
+  'e3_omniscience': { id: 'e3_omniscience', name: 'Omniscience Financière', cost: 5000, desc: 'Votre banque transcende le temps et l\'espace. Score de prestige ultime.', req: ['e3_timewarp', 'e3_singularity'], tier: 3 }
 };
 
 let gameState = {
@@ -827,11 +841,15 @@ ipcMain.handle('unlock-endgame-research', (event, id) => {
     gameState.endgameResearches.push(id);
     
     // Effets immédiats
-    if (id === 'e_marketing') {
-      gameState.clients += 10000000;
+    if (id === 'e_marketing') gameState.clients += 10000000;
+    if (id === 'e2_apex') gameState.clients += 5000000; // Bonus immédiat +5M clients
+    if (id === 'e3_omniscience') {
+      // Prestige ultime : bonus massif de DM
+      gameState.darkMatter = (gameState.darkMatter || 0) + 10000;
     }
-    
-    return { success: true, message: `Ascension : ${r.name} débloquée !` };
+
+    const tierLabel = r.tier === 3 ? '🌟🌟🌟' : r.tier === 2 ? '🌟🌟' : '🌟';
+    return { success: true, message: `${tierLabel} Ascension Palier ${r.tier} : ${r.name} débloquée !` };
   }
   return { success: false, message: "Matière Noire (DM) insuffisante." };
 });
@@ -873,6 +891,7 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_tax_evasion')) salaries *= 0.8;
   if (ur.has('r_offshore')) salaries *= 0.9;
   if (ur.has('r_tax_haven')) salaries *= 0.85;
+  if (er.has('e2_workforce')) salaries *= 0.1; // Palier II : Automatisation Totale (÷10)
   gameState.money -= salaries;
   
   // Frais de tenue de compte
@@ -882,10 +901,13 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_blockchain')) feePerClient += 3;
   if (ur.has('r_moon')) feePerClient += 10;
   if (ur.has('r_mars')) feePerClient += 20;
+  if (er.has('e2_empire')) feePerClient *= 3; // Palier II : Empire Bancaire Cosmique (×3)
   const accountFees = gameState.clients * feePerClient;
   gameState.money += accountFees;
   
-  const interestIncome = gameState.loansOut * gameState.interestRate * (er.has('e_finance') ? 10 : 1);
+  // Palier II e2_omniloan remplace e_finance (×100 au lieu de ×10)
+  const loanMultiplier = er.has('e2_omniloan') ? 100 : (er.has('e_finance') ? 10 : 1);
+  const interestIncome = gameState.loansOut * gameState.interestRate * loanMultiplier;
   gameState.money += interestIncome;
   
   const principalRepayment = gameState.loansOut * 0.1;
@@ -899,6 +921,7 @@ ipcMain.handle('next-day', () => {
   if (ur.has('r_gamification')) newClients += 5;
   if (ur.has('r_global_expansion')) newClients += 20;
   if (ur.has('r_sponsor_esport')) newClients += 10;
+  if (er.has('e2_apex')) newClients += 1000; // Palier II : Attraction Gravitationnelle
   
   let cbMessage = "";
   // Central Bank adjusts rates occasionally
@@ -933,6 +956,7 @@ ipcMain.handle('next-day', () => {
     if (ur.has('r_loyalty')) lost = Math.floor(lost * 0.8);
     if (ur.has('r_monopoly')) lost = Math.floor(lost * 0.5);
     if (ur.has('r_mindcontrol')) lost = 0;
+    if (er.has('e3_singularity')) lost = 0; // Palier III : Singularité Client
     gameState.clients -= lost;
     cbMessage += ` Taux trop élevés : -${lost} clients.`;
   } else if (rateDiff <= 0.001) {
@@ -1163,6 +1187,7 @@ ipcMain.handle('next-day', () => {
   // Génération de Matière Noire Automatique
   if (er.has('e_dm')) {
     let dmGain = er.has('e_auto_dm') ? 2 : 1;
+    if (er.has('e2_blackhole')) dmGain += 5; // Palier II : Singularité Gravitationnelle
     gameState.darkMatter = (gameState.darkMatter || 0) + dmGain;
   }
 
@@ -1227,6 +1252,18 @@ ipcMain.handle('next-day', () => {
   let profitBonus = 0;
   let totalGrossIncome = accountFees + interestIncome + hftDividends + traderProfit;
   let consumedRP = 0;
+
+  // Palier III : Revenu divin fixe (+1 Qa €/jour)
+  if (er.has('e3_godbank')) {
+    gameState.money += 1e15;
+    totalGrossIncome += 1e15;
+  }
+
+  // Palier III : Distorsion Temporelle (revenus ×2)
+  if (er.has('e3_timewarp')) {
+    gameState.money += totalGrossIncome; // Double les revenus en ajoutant une copie
+    totalGrossIncome *= 2;
+  }
   
   if (allDone && gameState.researchPoints > 0 && gameState.autoConsumeRPEnabled !== false) {
     let multiplier = Math.log2(1 + gameState.researchPoints) * 0.05; // Échelle logarithmique pour éviter l'explosion

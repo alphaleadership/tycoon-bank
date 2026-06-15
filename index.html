@@ -254,6 +254,29 @@
         <div class="card research-card glass" style="margin-bottom: 1.5rem; border: 1px solid #9b59b6;">
           <h2 style="color: #9b59b6;">Ascension Quantique (Endgame)</h2>
           <p style="color: #bdc3c7;">Vous avez conquis le monde. Il est temps de conquérir le multivers.</p>
+
+          <!-- Indicateur de palier -->
+          <div id="ascension-tier-banner" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-radius: 10px; overflow: hidden;">
+            <div id="tier1-badge" style="flex: 1; padding: 0.75rem; text-align: center; background: rgba(155,89,182,0.15); border: 1px solid rgba(155,89,182,0.4); border-radius: 8px;">
+              <div style="font-size: 1.2rem;">🌌</div>
+              <div style="font-weight: bold; color: #9b59b6; font-size: 0.85rem;">Palier I</div>
+              <div style="font-size: 0.75rem; color: #bdc3c7;">Ascension Quantique</div>
+              <div id="tier1-status" style="font-size: 0.7rem; margin-top: 0.25rem; color: #7f8c8d;">–</div>
+            </div>
+            <div id="tier2-badge" style="flex: 1; padding: 0.75rem; text-align: center; background: rgba(26,188,156,0.1); border: 1px solid rgba(26,188,156,0.3); border-radius: 8px; opacity: 0.5;">
+              <div style="font-size: 1.2rem;">⚫</div>
+              <div style="font-weight: bold; color: #1abc9c; font-size: 0.85rem;">Palier II</div>
+              <div style="font-size: 0.75rem; color: #bdc3c7;">Dominance Cosmique</div>
+              <div id="tier2-status" style="font-size: 0.7rem; margin-top: 0.25rem; color: #7f8c8d;">Nécessite Palier I complet</div>
+            </div>
+            <div id="tier3-badge" style="flex: 1; padding: 0.75rem; text-align: center; background: rgba(212,172,13,0.1); border: 1px solid rgba(212,172,13,0.3); border-radius: 8px; opacity: 0.5;">
+              <div style="font-size: 1.2rem;">👑</div>
+              <div style="font-weight: bold; color: #d4ac0d; font-size: 0.85rem;">Palier III</div>
+              <div style="font-size: 0.75rem; color: #bdc3c7;">Transcendance</div>
+              <div id="tier3-status" style="font-size: 0.7rem; margin-top: 0.25rem; color: #7f8c8d;">Nécessite Palier II complet</div>
+            </div>
+          </div>
+
           <div class="stat-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
             <div class="stat-item">
               <span class="stat-label">Matière Noire (DM)</span>
@@ -267,7 +290,7 @@
             </div>
           </div>
           
-          <div class="research-tree" id="endgame-tree-container" style="height: 600px; border: 1px solid rgba(155, 89, 182, 0.3); border-radius: 8px; background: rgba(0,0,0,0.4);">
+          <div class="research-tree" id="endgame-tree-container" style="height: 650px; border: 1px solid rgba(155, 89, 182, 0.3); border-radius: 8px; background: rgba(0,0,0,0.4);">
             <!-- Endgame Research items injected here via JS -->
           </div>
         </div>
