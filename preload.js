@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sellRP: () => ipcRenderer.invoke('sell-rp'),
   sellAllRP: () => ipcRenderer.invoke('sell-all-rp'),
   buyMaxRP: () => ipcRenderer.invoke('buy-max-rp'),
-  buyDM: () => ipcRenderer.invoke('buy-dm'),
+  buyDM: (amount) => ipcRenderer.invoke('buy-dm', amount),
   buyMegaMarketing: () => ipcRenderer.invoke('buy-mega-marketing'),
   buyMegaLobbying: () => ipcRenderer.invoke('buy-mega-lobbying'),
   unlockEndgameResearch: (id) => ipcRenderer.invoke('unlock-endgame-research', id),

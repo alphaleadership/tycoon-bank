@@ -1171,13 +1171,17 @@ ipcMain.handle('buy-mega-lobbying', () => {
   return { success: false, message: `Fonds insuffisants. Il vous faut ${formatMoney(cost)}.` };
 });
 
-ipcMain.handle('buy-dm', () => {
-  if (gameState.money >= 1000000000000) { // 1 Trillion
-    gameState.money -= 1000000000000;
-    gameState.darkMatter = (gameState.darkMatter || 0) + 1;
-    return { success: true, message: "1 Matière Noire générée ! (-1 Trillion €)" };
+ipcMain.handle('buy-dm', (event, amount = 1) => {
+  const dmAmount = parseInt(amount, 10);
+  if (isNaN(dmAmount) || dmAmount < 1) return { success: false, message: "Quantité invalide." };
+
+  const cost = dmAmount * 1000000000000; // 1 Trillion
+  if (gameState.money >= cost) {
+    gameState.money -= cost;
+    gameState.darkMatter = (gameState.darkMatter || 0) + dmAmount;
+    return { success: true, message: `${dmAmount} Matière Noire générée ! (-${formatMoney(cost)})` };
   }
-  return { success: false, message: "Vous n'avez pas assez d'argent (1 Trillion € requis)." };
+  return { success: false, message: `Vous n'avez pas assez d'argent (${formatMoney(cost)} requis).` };
 });
 
 ipcMain.handle('unlock-endgame-research', (event, id) => {

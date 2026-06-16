@@ -284,9 +284,12 @@
               <span class="stat-label">Matière Noire (DM)</span>
               <span class="stat-value" style="color: #9b59b6;" id="val-dm">0</span>
             </div>
-            <div class="stat-item" style="display: flex; align-items: center; justify-content: center;">
+            <div class="stat-item" style="display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="range" id="slider-buy-dm" min="1" max="1" value="1" style="flex: 1;">
+              </div>
               <button id="btn-buy-dm" class="btn primary-btn" style="width: 100%; background: rgba(155, 89, 182, 0.2); border-color: #9b59b6;">
-                Générer 1 DM (1 Trillion €)<br/>
+                Générer <span id="val-buy-dm-amount">1</span> DM (<span id="val-buy-dm-cost">1 Trillion €</span>)<br/>
                 <span id="val-dm-missing" style="font-size: 0.8rem; opacity: 0.8;"></span>
               </button>
             </div>

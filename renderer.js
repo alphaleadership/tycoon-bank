@@ -272,7 +272,7 @@ const updateEndgameTree = (state) => {
   }
   
   const updates = [];
-  const erSet = new Set(state.endgameResearches);
+  const erSet = new Set(state.endgameResearches || []);
   for (const [id, r] of Object.entries(state.endgameTree)) {
     const isUnlocked = erSet.has(id);
     const hasReq = r.req.every(reqId => erSet.has(reqId));
@@ -478,17 +478,40 @@ const updateUI = async () => {
     document.getElementById('lvl-mega-marketing').textContent = state.megaMarketing || 0;
     document.getElementById('lvl-mega-lobbying').textContent = state.megaLobbying || 0;
     
+    const sliderBuyDm = document.getElementById('slider-buy-dm');
+    const valBuyDmAmount = document.getElementById('val-buy-dm-amount');
+    const valBuyDmCost = document.getElementById('val-buy-dm-cost');
     const missingDmSpan = document.getElementById('val-dm-missing');
-    if (missingDmSpan) {
-      const dmCost = 1000000000000;
-      if (state.money >= dmCost) {
+    
+    if (sliderBuyDm && missingDmSpan && valBuyDmAmount && valBuyDmCost) {
+      const dmBaseCost = 1000000000000;
+      const maxAffordable = Math.floor(state.money / dmBaseCost);
+      const newMax = Math.max(1, maxAffordable);
+      
+      if (parseInt(sliderBuyDm.max) !== newMax) {
+        sliderBuyDm.max = newMax;
+      }
+      
+      let currentValue = parseInt(sliderBuyDm.value);
+      if (currentValue > newMax) {
+        sliderBuyDm.value = newMax;
+        currentValue = newMax;
+      }
+
+      valBuyDmAmount.textContent = formatNumber(currentValue);
+      valBuyDmCost.textContent = formatNumber(currentValue * dmBaseCost) + " €";
+
+      const currentCost = currentValue * dmBaseCost;
+      if (state.money >= currentCost) {
         missingDmSpan.textContent = "Prêt pour l'Ascension !";
         missingDmSpan.style.color = "#2ecc71";
       } else {
-        const missingPercent = ((dmCost - state.money) / dmCost) * 100;
+        const missingPercent = ((currentCost - state.money) / currentCost) * 100;
         missingDmSpan.textContent = `(Il manque ${missingPercent.toFixed(1)}%)`;
         missingDmSpan.style.color = "#e74c3c";
       }
+      
+      sliderBuyDm.style.display = newMax > 1 ? 'block' : 'none';
     }
     
     // We only update endgame tree if the tab is visible or we just want to keep it updated in background
@@ -508,7 +531,7 @@ const updateUI = async () => {
     updateAmfUI(state);
 
     // Mise à jour des badges de palier
-    const erSet = new Set(state.endgameResearches);
+    const erSet = new Set(state.endgameResearches || []);
     const tier1Keys = ['e_base','e_marketing','e_finance','e_tech','e_dm','e_auto_dm'];
     const tier2Keys = ['e2_empire','e2_workforce','e2_blackhole','e2_omniloan','e2_apex'];
     const tier3Keys = ['e3_godbank','e3_timewarp','e3_singularity','e3_omniscience'];
@@ -672,9 +695,22 @@ if (document.getElementById('btn-mega-buy-max-rp')) {
   });
 }
 
+if (document.getElementById('slider-buy-dm')) {
+  document.getElementById('slider-buy-dm').addEventListener('input', (e) => {
+    const amount = parseInt(e.target.value, 10);
+    const dmBaseCost = 1000000000000;
+    const currentCost = amount * dmBaseCost;
+    
+    document.getElementById('val-buy-dm-amount').textContent = formatNumber(amount);
+    document.getElementById('val-buy-dm-cost').textContent = formatNumber(currentCost) + " €";
+  });
+}
+
 if (document.getElementById('btn-buy-dm')) {
   document.getElementById('btn-buy-dm').addEventListener('click', async () => {
-    const res = await window.electronAPI.buyDM();
+    const slider = document.getElementById('slider-buy-dm');
+    const amount = slider ? parseInt(slider.value, 10) : 1;
+    const res = await window.electronAPI.buyDM(amount);
     addLog(res.message);
     updateUI();
   });
