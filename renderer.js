@@ -503,8 +503,10 @@ const updateUI = async () => {
 
     const countDone = (keys) => keys.filter(k => erSet.has(k)).length;
     const t1Done = countDone(tier1Keys), t2Done = countDone(tier2Keys), t3Done = countDone(tier3Keys);
-    const hasTier1 = t1Done > 0;
-    const hasTier2 = t2Done > 0;
+    // [FIX] Le palier suivant ne devient accessible que quand le palier précédent est
+    // ENTIÈREMENT complété, pas dès qu'une seule recherche est débloquée.
+    const hasTier1 = t1Done === tier1Keys.length;
+    const hasTier2 = t2Done === tier2Keys.length;
 
     const t1El = document.getElementById('tier1-status');
     const t2El = document.getElementById('tier2-status');
@@ -512,17 +514,19 @@ const updateUI = async () => {
     const t2Badge = document.getElementById('tier2-badge');
     const t3Badge = document.getElementById('tier3-badge');
 
-    if (t1El) t1El.textContent = t1Done === tier1Keys.length ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;
-    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : hasTier1 ? `${t2Done}/${tier2Keys.length} recherches (Palier II disponible)` : 'Nécessite au moins une recherche du Palier I';
-    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : hasTier2 ? `${t3Done}/${tier3Keys.length} recherches (Palier III disponible)` : 'Nécessite au moins une recherche du Palier II';
+    if (t1El) t1El.textContent = hasTier1 ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;
+    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : hasTier1 ? `${t2Done}/${tier2Keys.length} recherches (Palier II disponible)` : 'Nécessite de compléter le Palier I';
+    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : hasTier2 ? `${t3Done}/${tier3Keys.length} recherches (Palier III disponible)` : 'Nécessite de compléter le Palier II';
 
     if (t2Badge) {
       t2Badge.style.opacity = hasTier1 ? '1' : '0.5';
-      t2Badge.style.cursor = 'pointer';
+      t2Badge.style.cursor = hasTier1 ? 'pointer' : 'not-allowed';
+      t2Badge.onclick = hasTier1 ? () => focusEndgameTier(state, 2) : null;
     }
     if (t3Badge) {
       t3Badge.style.opacity = hasTier2 ? '1' : '0.5';
-      t3Badge.style.cursor = 'pointer';
+      t3Badge.style.cursor = hasTier2 ? 'pointer' : 'not-allowed';
+      t3Badge.onclick = hasTier2 ? () => focusEndgameTier(state, 3) : null;
     }
   } else if (document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'none';
@@ -785,12 +789,7 @@ updateUI();
 let _lastKnownAllDone = false; // cache local mis à jour par updateUI
 
 setInterval(async () => {
-  const state = await window.electronAPI.getState();
-  const urSet = new Set(state.unlockedResearches);
-  const allDone = Object.keys(state.researchTree)
-    .filter(k => !state.researchTree[k].repeatable)
-    .every(k => urSet.has(k));
-  if (!allDone) return;
+  if (!_lastKnownAllDone) return; // pas encore en endgame, on ne touche rien
   const res = await window.electronAPI.nextDay();
   if (res && res.message) {
     addLog("<b>⏳ Journée Auto (Endgame)</b><br/>" + res.message);
