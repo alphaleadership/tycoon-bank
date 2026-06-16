@@ -875,8 +875,8 @@ ipcMain.handle('save-game', (event, slot = '1') => {
   currentSlot = slot;
   try {
     const savePath = path.join(app.getPath('userData'), `tycoon_save_${slot}.json`);
-    // On exclut researchTree (statique, reconstruit au chargement) pour alléger la sauvegarde
-    const { researchTree, ...stateToSave } = gameState;
+    // On exclut researchTree et endgameTree (statiques, reconstruits au chargement) pour alléger la sauvegarde
+    const { researchTree, endgameTree, ...stateToSave } = gameState;
     fs.writeFileSync(savePath, JSON.stringify(stateToSave));
     return { success: true, message: `Partie sauvegardée (Slot ${slot}) !` };
   } catch (err) {
@@ -900,11 +900,12 @@ ipcMain.handle('load-game', (event, slot = '1') => {
       
       // Mises à jour de compatibilité avec les anciennes sauvegardes
       gameState.researchTree = RESEARCH_TREE;
+      gameState.endgameTree = JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE)); // Force la MAJ systématique
+      
       if (gameState.traders === undefined) gameState.traders = 0;
       if (gameState.marketers === undefined) gameState.marketers = 0;
       if (gameState.marketingLevel === undefined) gameState.marketingLevel = 1;
       if (gameState.endgameResearches === undefined) gameState.endgameResearches = [];
-      if (gameState.endgameTree === undefined) gameState.endgameTree = JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE));
       if (gameState.darkMatter === undefined) gameState.darkMatter = 0;
       if (gameState.rebirthCount === undefined) gameState.rebirthCount = 0;
       if (gameState.prestigePoints === undefined) gameState.prestigePoints = 0;
