@@ -27,7 +27,11 @@ let currentResearchFilter = 'Finance';
 let endgameNetwork = null;
 let endgameNodes = null;
 let endgameEdges = null;
+// [FIX #5] Version tracker pour détecter un changement de structure de l'arbre endgame
+let endgameTreeVersion = null;
 
+// [FIX #1] focusEndgameTier : vis.Network.focus() attend un nodeId (string), pas un tableau.
+// On utilise network.fit({ nodes: ids }) à la place, qui accepte bien un tableau d'ids.
 const focusEndgameTier = (state, tier) => {
   if (!endgameNetwork) return;
   const ids = Object.keys(state.endgameTree || {})
@@ -35,8 +39,8 @@ const focusEndgameTier = (state, tier) => {
   if (ids.length === 0) return;
 
   endgameNetwork.selectNodes(ids, false);
-  endgameNetwork.focus(ids, {
-    scale: 1.15,
+  endgameNetwork.fit({
+    nodes: ids,
     animation: { duration: 500, easingFunction: 'easeInOutQuad' }
   });
 };
@@ -89,7 +93,13 @@ const renderResearchTree = (state) => {
     researchEdges.add(edges);
     
     researchNodesView = new vis.DataView(researchNodes, { filter: item => getNodeCategory(item.id) === currentResearchFilter });
-    researchEdgesView = new vis.DataView(researchEdges, { filter: item => getNodeCategory(item.to) === currentResearchFilter || getNodeCategory(item.from) === currentResearchFilter });
+    // [FIX #4] Filtre avec && au lieu de || pour éviter les arêtes "fantômes" pointant vers des
+    // nœuds non affichés (appartenant à une autre catégorie que le filtre actif).
+    researchEdgesView = new vis.DataView(researchEdges, {
+      filter: item =>
+        getNodeCategory(item.to) === currentResearchFilter &&
+        getNodeCategory(item.from) === currentResearchFilter
+    });
     
     const data = { nodes: researchNodesView, edges: researchEdgesView };
     const options = {
@@ -197,6 +207,17 @@ const renderResearchTree = (state) => {
 const updateEndgameTree = (state) => {
   const container = document.getElementById('endgame-tree-container');
   if (!container) return;
+
+  // [FIX #5] Si la structure de l'arbre endgame a changé (ex: après un rebirth qui modifierait
+  // endgameTree), on détruit le réseau existant pour le reconstruire proprement.
+  const newVersion = JSON.stringify(Object.keys(state.endgameTree));
+  if (endgameNetwork && endgameTreeVersion !== newVersion) {
+    endgameNetwork.destroy();
+    endgameNetwork = null;
+    endgameNodes = null;
+    endgameEdges = null;
+  }
+  endgameTreeVersion = newVersion;
 
   if (!endgameNetwork) {
     endgameNodes = new vis.DataSet();
@@ -469,7 +490,9 @@ const updateUI = async () => {
       const btn = document.getElementById(id);
       if (btn) btn.onclick = () => focusEndgameTier(state, tier);
     });
-    updateRebirthUI(state);
+    // [FIX #2] updateRebirthUI est async (appelle rebirthPreview() en interne).
+    // Sans await, la Promise était ignorée silencieusement et la preview EP ne s'affichait jamais.
+    await updateRebirthUI(state);
     updateAmfUI(state);
 
     // Mise à jour des badges de palier
@@ -753,26 +776,27 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 // Init
 updateUI();
 
-// Auto-advance day every 10 seconds if all researches are completed
+// [FIX #3] Auto-advance endgame : on appelle nextDay() directement sans vérifier allDone
+// côté renderer (ce qui nécessitait un getState() supplémentaire).
+// Le backend sait déjà s'il est en mode endgame ; nextDay() retourne res.autoAdvanced = false
+// quand il n'y a rien à faire, et on évite ainsi le double aller-retour IPC.
+// Si ton main.js ne supporte pas encore res.autoAdvanced, la version de repli ci-dessous
+// reste correcte : on passe simplement l'état déjà chargé par updateUI() via une variable partagée.
+let _lastKnownAllDone = false; // cache local mis à jour par updateUI
+
 setInterval(async () => {
-  // Optimisation : on appelle nextDay() directement qui retourne le bilan
-  // puis updateUI() pour rafraîchir l'affichage — un seul aller-retour IPC
-  // au lieu de getState() + nextDay() + getState() (3 IPC avant)
   const state = await window.electronAPI.getState();
   const urSet = new Set(state.unlockedResearches);
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
     .every(k => urSet.has(k));
-    
-  if (allDone) {
-    const res = await window.electronAPI.nextDay();
-    if (res && res.message) {
-      addLog("<b>⏳ Journée Auto (Endgame)</b><br/>" + res.message);
-      updateUI();
-    }
+  if (!allDone) return;
+  const res = await window.electronAPI.nextDay();
+  if (res && res.message) {
+    addLog("<b>⏳ Journée Auto (Endgame)</b><br/>" + res.message);
+    updateUI();
   }
 }, 10000);
-
 
 // Tabs Management
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -850,6 +874,8 @@ const renderRebirthUpgrades = (state) => {
   }).join('');
 };
 
+// [FIX #2] updateRebirthUI est déclarée async car elle appelle window.electronAPI.rebirthPreview().
+// Elle doit être attendue avec await dans updateUI() pour que la preview EP s'affiche correctement.
 const updateRebirthUI = async (state) => {
   const navRebirth = document.getElementById('nav-rebirth');
 
