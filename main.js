@@ -903,6 +903,13 @@ ipcMain.handle('load-game', (event, slot = '1') => {
       if (gameState.traders === undefined) gameState.traders = 0;
       if (gameState.marketers === undefined) gameState.marketers = 0;
       if (gameState.marketingLevel === undefined) gameState.marketingLevel = 1;
+      if (gameState.endgameResearches === undefined) gameState.endgameResearches = [];
+      if (gameState.endgameTree === undefined) gameState.endgameTree = JSON.parse(JSON.stringify(ENDGAME_RESEARCH_TREE));
+      if (gameState.darkMatter === undefined) gameState.darkMatter = 0;
+      if (gameState.rebirthCount === undefined) gameState.rebirthCount = 0;
+      if (gameState.prestigePoints === undefined) gameState.prestigePoints = 0;
+      if (gameState.rebirthUpgrades === undefined) gameState.rebirthUpgrades = {};
+      if (gameState.amf === undefined) gameState.amf = null;
       
       // Injecter les nouvelles actions si elles n'existent pas dans la sauvegarde
       for (let s in STOCKS) {
