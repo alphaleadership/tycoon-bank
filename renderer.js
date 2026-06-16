@@ -506,31 +506,32 @@ const updateUI = async () => {
     const tier3Keys = ['e3_godbank','e3_timewarp','e3_singularity','e3_omniscience'];
 
     const countDone = (keys) => keys.filter(k => erSet.has(k)).length;
-    const t1Done = countDone(tier1Keys), t2Done = countDone(tier2Keys), t3Done = countDone(tier3Keys);
-    // [FIX] Le palier suivant ne devient accessible que quand le palier précédent est
-    // ENTIÈREMENT complété, pas dès qu'une seule recherche est débloquée.
-    const hasTier1 = t1Done === tier1Keys.length;
-    const hasTier2 = t2Done === tier2Keys.length;
+    const t1Done = countDone(tier1Keys), t2Done = countDone(tier2Keys), t3Done = countDone(tier3Keys);        
+
+    // [FIX] Le palier suivant devient accessible dès que la recherche "verrou" du palier précédent est acquise.
+    const hasTier1Accessible = erSet.has('e_auto_dm');
+    const hasTier2Accessible = erSet.has('e2_apex');
 
     const t1El = document.getElementById('tier1-status');
     const t2El = document.getElementById('tier2-status');
     const t3El = document.getElementById('tier3-status');
+    const t1Badge = document.getElementById('tier1-badge');
     const t2Badge = document.getElementById('tier2-badge');
     const t3Badge = document.getElementById('tier3-badge');
 
-    if (t1El) t1El.textContent = hasTier1 ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;
-    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : hasTier1 ? `${t2Done}/${tier2Keys.length} recherches (Palier II disponible)` : 'Nécessite de compléter le Palier I';
-    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : hasTier2 ? `${t3Done}/${tier3Keys.length} recherches (Palier III disponible)` : 'Nécessite de compléter le Palier II';
+    if (t1El) t1El.textContent = t1Done === tier1Keys.length ? '✅ Complété' : `${t1Done}/${tier1Keys.length} recherches`;       
+    if (t2El) t2El.textContent = t2Done === tier2Keys.length ? '✅ Complété' : hasTier1Accessible ? `${t2Done}/${tier2Keys.length} recherches (Palier II disponible)` : 'Nécessite la recherche : Extraction Parallèle';
+    if (t3El) t3El.textContent = t3Done === tier3Keys.length ? '✅ Complété' : hasTier2Accessible ? `${t3Done}/${tier3Keys.length} recherches (Palier III disponible)` : 'Nécessite la recherche : Attraction Gravitationnelle';
 
+    if (t1Badge) t1Badge.style.cursor = 'pointer';
     if (t2Badge) {
-      t2Badge.style.opacity = hasTier1 ? '1' : '0.5';
-      t2Badge.style.cursor = hasTier1 ? 'pointer' : 'not-allowed';
-      t2Badge.onclick = hasTier1 ? () => focusEndgameTier(state, 2) : null;
+      t2Badge.style.opacity = hasTier1Accessible ? '1' : '0.5';
+      t2Badge.style.cursor = 'pointer';
+      // On n'écrase plus l'onclick pour permettre de visualiser le palier à l'avance
     }
     if (t3Badge) {
-      t3Badge.style.opacity = hasTier2 ? '1' : '0.5';
-      t3Badge.style.cursor = hasTier2 ? 'pointer' : 'not-allowed';
-      t3Badge.onclick = hasTier2 ? () => focusEndgameTier(state, 3) : null;
+      t3Badge.style.opacity = hasTier2Accessible ? '1' : '0.5';
+      t3Badge.style.cursor = 'pointer';
     }
   } else if (document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'none';
