@@ -459,6 +459,10 @@ const updateUI = async () => {
   const allDone = Object.keys(state.researchTree)
     .filter(k => !state.researchTree[k].repeatable)
     .every(k => urSet.has(k));
+  // [FIX #3b] Synchronise le cache utilisé par le setInterval endgame.
+  // Sans cette ligne, _lastKnownAllDone restait false pour toujours et
+  // l'auto-avance de jour ne se déclenchait jamais.
+  _lastKnownAllDone = allDone;
   if (allDone && document.getElementById('endgame-upgrades')) {
     document.getElementById('endgame-upgrades').style.display = 'block';
     if (document.getElementById('nav-ascension')) document.getElementById('nav-ascension').style.display = 'inline-block';
