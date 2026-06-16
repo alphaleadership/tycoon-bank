@@ -785,7 +785,12 @@ updateUI();
 let _lastKnownAllDone = false; // cache local mis à jour par updateUI
 
 setInterval(async () => {
-  if (!_lastKnownAllDone) return; // pas encore en endgame, on ne touche rien
+  const state = await window.electronAPI.getState();
+  const urSet = new Set(state.unlockedResearches);
+  const allDone = Object.keys(state.researchTree)
+    .filter(k => !state.researchTree[k].repeatable)
+    .every(k => urSet.has(k));
+  if (!allDone) return;
   const res = await window.electronAPI.nextDay();
   if (res && res.message) {
     addLog("<b>⏳ Journée Auto (Endgame)</b><br/>" + res.message);
