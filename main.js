@@ -1288,6 +1288,7 @@ ipcMain.handle('next-day', () => {
 
   let maxDiff = ur.has('r_lobbying') ? 0.05 : 0.03;
   if (ur.has('r_bribery')) maxDiff += 0.02;
+  if (gameState.megaLobbying > 0) maxDiff += gameState.megaLobbying * 0.05; // Répare : Intégration du Mégaprojet
   if (ur.has('r_mindcontrol')) maxDiff = 0.99;
 
   if (ur.has('r_auto_rate')) {
@@ -1471,8 +1472,9 @@ ipcMain.handle('next-day', () => {
   if (gameState.clients > maxClientsAllowed) {
     let overloadedClients = gameState.clients - maxClientsAllowed;
     let leavingClients = Math.ceil(overloadedClients * 0.2);
+    if (er.has('e3_singularity')) leavingClients = 0; // Répare : Aucune fuite possible en endgame
     gameState.clients -= leavingClients;
-    cbMessage += ` 📞 Sous-effectif du support : -${leavingClients} clients partis.`;
+    if (leavingClients > 0) cbMessage += ` 📞 Sous-effectif du support : -${leavingClients} clients partis.`;
   }
 
   let rpPerResearcher = 2;
@@ -1484,9 +1486,10 @@ ipcMain.handle('next-day', () => {
   const rbRpLvl = getRbUpgLevel('rb_rp_speed');
   if (rbRpLvl > 0) rpPerResearcher += rbRpLvl; // Rebirth : Mémoire Scientifique
   
-  gameState.researchPoints += gameState.researchers * rpPerResearcher;
-  if (ur.has('r_university')) gameState.researchPoints += 5;
-  if (ur.has('r_quantum')) gameState.researchPoints *= 2;
+  let dailyRP = gameState.researchers * rpPerResearcher;
+  if (ur.has('r_university')) dailyRP += 5;
+  if (ur.has('r_quantum')) dailyRP *= 2; // Répare : Double la PRODUCTION, pas le stock total
+  gameState.researchPoints += dailyRP;
   
   if (ur.has('r_ai')) gameState.money += 2000; // AI Trading passive income
   if (ur.has('r_roboadvisor')) gameState.money += 1000;
@@ -1541,8 +1544,8 @@ ipcMain.handle('next-day', () => {
 
   // Génération de Matière Noire Automatique
   if (er.has('e_dm')) {
-    let dmGain = er.has('e_auto_dm') ? 2 : 1;
-    if (er.has('e2_blackhole')) dmGain += 5; // Palier II : Singularité Gravitationnelle
+    let dmGain = er.has('e_auto_dm') ? 10 : 5; // Boost de production DM
+    if (er.has('e2_blackhole')) dmGain += 25; // Boost de production DM
     gameState.darkMatter = (gameState.darkMatter || 0) + dmGain;
   }
 
