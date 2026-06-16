@@ -39,8 +39,16 @@ const focusEndgameTier = (state, tier) => {
   if (ids.length === 0) return;
 
   endgameNetwork.selectNodes(ids, false);
-  endgameNetwork.fit({
-    nodes: ids,
+  
+  // Utiliser focus sur un noeud du palier pour forcer la caméra à s'y déplacer
+  // au lieu de fit() qui ne fait rien si les noeuds sont déjà dans le viewport.
+  let targetNode = ids[0];
+  if (tier === 1 && ids.includes('e_finance')) targetNode = 'e_finance';
+  if (tier === 2 && ids.includes('e2_blackhole')) targetNode = 'e2_blackhole';
+  if (tier === 3 && ids.includes('e3_singularity')) targetNode = 'e3_singularity';
+
+  endgameNetwork.focus(targetNode, {
+    scale: 1.2,
     animation: { duration: 500, easingFunction: 'easeInOutQuad' }
   });
 };
